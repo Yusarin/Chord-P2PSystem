@@ -5,56 +5,91 @@
 import org.omg.CosNaming.NamingContextPackage.NotFound;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.*;
-import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.channels.*;
 import java.util.HashMap;
+import java.util.Iterator;
 
 public class process extends Thread {
     private final int POOL_ID = 0;//default pool ID
     private final int PROC_ID;//this process's ID
     private final InetAddress IP;//this process's ip
     private final int port;// this process's port
-    private boolean running=false;
-    private AsynchronousServerSocketChannel sock;
-    private HashMap<Integer, Socket> groupMembers;//map process ID's to sockets
+    private boolean running = false;//if the process is running
+    private ServerSocketChannel sock = ServerSocketChannel.open();
+    private Selector selector = Selector.open();
+    private HashMap<Integer, SocketChannel> groupMembers = new HashMap<Integer, SocketChannel>();//map process ID's to sockets
+    private HashMap<InetSocketAddress, Integer> ID_INFO = new HashMap<InetSocketAddress, Integer>();
 
     /**
-     * @param number ID assigned for this process
-     * @param s      IP this process bound to
+     * @param number   ID assigned for this process
+     * @param address  IP this process bound to
      * @param poolPort Process Pool's port
-     * @param port Port this process bound to
+     * @param port     Port this process bound to
      */
-    public process(int number, InetAddress s, int port, int poolPort) throws IOException {
+    public process(int number, InetAddress address, int port, InetAddress poolAddress, int poolPort) throws IOException {
         super();
         PROC_ID = number;
-        IP = s;
+        IP = address;
         this.port = port;
-        sock = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(IP,port));
-        groupMembers = new HashMap<Integer, Socket>();
-        groupMembers.put(POOL_ID, new Socket(IP, poolPort));
+        InetSocketAddress poolSockAddr = new InetSocketAddress(poolAddress, poolPort);
+        SocketChannel poolSock = SocketChannel.open(poolSockAddr);
+        groupMembers.put(POOL_ID, poolSock);
+        ID_INFO.put(poolSockAddr, POOL_ID);
+        sock.socket().bind(new InetSocketAddress(IP, port));
+        sock.configureBlocking(false);//set the socket to non-blocking socket.
+        sock.register(selector, SelectionKey.OP_ACCEPT);//only accept server socket
+        groupMembers.get(POOL_ID).register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);//registor pool_socket into selector
     }
 
+    /**
+     * Override a run method, implement a NIO server event loop
+     */
     @Override
     public void run() {
         running = true;
-        sock.accept();
-        //TODO:implement this run method
+        System.out.println("Process " + PROC_ID + "is running");
+        Iterator<SelectionKey> iter;
+        SelectionKey key;
+        try {
+            while (sock.isOpen()) {
+                selector.select();
+                iter = selector.selectedKeys().iterator();
+                while (iter.hasNext()) {
+                    key = iter.next();
+                    iter.remove();
+                    if (key.isAcceptable()) {
+                        handleAccept(key);
+                    }
+                    if (key.isReadable()) {
+                        handleRead(key);
+                    }
+                    if (key.isWritable()) {
+                        handleWrite(key);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("IOError");
+            e.printStackTrace();
+        }
     }
 
     /**
+     * Just simply plug a key in selector
+     *
      * @param dst dst process id
      * @param msg message to send
      * @throws NotFound ID is not in neighbor list
      */
     public void unicast_send(int dst, byte[] msg) throws NotFound {
         if (groupMembers.containsKey(dst)) {
-            Socket target = groupMembers.get(dst);
+            SocketChannel target = groupMembers.get(dst);
             try {
-                OutputStream out = target.getOutputStream();
-                out.write(msg);
-            } catch (IOException e) {
+                target.register(selector, SelectionKey.OP_WRITE, msg);//attach a msg to send
+            } catch (ClosedChannelException e) {
                 e.printStackTrace();
             }
         }
@@ -62,32 +97,74 @@ public class process extends Thread {
     }
 
     /**
+     * Just simply plug a key in selector
+     *
      * @param src src process id
      * @param msg buffer to receive message
      * @throws NotFound ID is not in neighbor list
      */
     public void unicast_receive(int src, byte[] msg) throws NotFound {
         if (groupMembers.containsKey(src)) {
-            Socket target = groupMembers.get(src);
+            SocketChannel target = groupMembers.get(src);
             try {
-                InputStream in = target.getInputStream();
-                int len = msg.length;
-                in.read(msg);
-            } catch (IOException e) {
+                target.register(selector, SelectionKey.OP_READ, msg);//attach a msg buff to read
+            } catch (ClosedChannelException e) {
                 e.printStackTrace();
             }
         }
         throw new NotFound();
     }
 
+
     /**
-     * @param id   new process id
-     * @param ip   new process's ip
-     * @param port new process's port
+     * @param keyReadReady selection key ready to read
      */
-    public void addNeigh(int id, InetAddress ip, int port) throws IOException {
-        Socket s = new Socket(ip, port);
-        groupMembers.put(id, s);
+    private void handleRead(SelectionKey keyReadReady) {
+        SocketChannel s = (SocketChannel) keyReadReady.channel();
+        byte[] msg = (byte[]) keyReadReady.attachment();
+        InetSocketAddress incomingAddr = (InetSocketAddress) s.socket().getRemoteSocketAddress();
+        ByteBuffer buf = ByteBuffer.allocate(msg.length);
+        if (isPool(incomingAddr)){
+            //TODO implement pool msg read
+        }else{
+            //TODO:implement normal read
+        }
+        buf.wrap(msg);
+        System.out.println("Read a msg");
+        //TODO:implement this handleRead function
+    }
+
+    /**
+     * @param keyWriteReady selection key ready to write
+     */
+    private void handleWrite(SelectionKey keyWriteReady) {
+        SocketChannel s = (SocketChannel) keyWriteReady.channel();
+        byte[] msg = (byte[]) keyWriteReady.attachment();
+        InetSocketAddress incomingAddr = (InetSocketAddress) s.socket().getRemoteSocketAddress();
+        ByteBuffer buf = ByteBuffer.wrap(msg);
+        if(isPool(incomingAddr)){
+            //TODO implement pool msg write
+        }else {
+            //TODO implement normal msg write
+        }
+        System.out.println("write a msg");
+        //TODO:implement this handleWrite function
+    }
+
+    /**
+     * @param keyAcceptReady selection key ready to accept
+     */
+    private void handleAccept(SelectionKey keyAcceptReady) {
+        try {
+            SocketChannel s = ((ServerSocketChannel) keyAcceptReady.channel()).accept();//incoming connection socket
+            InetSocketAddress addr = (InetSocketAddress) s.socket().getRemoteSocketAddress();//remote address
+            int id = ID_INFO.get(addr);//find ID of in-coming connection
+            groupMembers.put(id, s);
+            s.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("New process was added");
     }
 
     /**
@@ -99,4 +176,14 @@ public class process extends Thread {
         System.out.printf("Port number is: %d\n", port);
     }
 
+    /**
+     * @return whether the process is OK to connect
+     */
+    public boolean isRunning() {
+        return running;
+    }
+
+    private boolean isPool(InetSocketAddress addr) {
+        return ID_INFO.get(addr) == 0;
+    }
 }
