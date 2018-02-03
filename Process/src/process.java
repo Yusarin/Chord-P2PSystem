@@ -187,7 +187,7 @@ public class process extends Thread {
         return ID_INFO.get(addr) == 0;
     }
     
-    //Add socket to the groupMember of this process.
+    //Add socket to the groupMember of this process. Called by pool's method.
     public void AddtoGroup(int pid, InetSocketAddress socketAddress){
         if(this.groupMembers.containsKey(pid)) return;
         this.groupMembers.put(pid, SocketChannel.open(socketAddress));
