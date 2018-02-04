@@ -124,9 +124,9 @@ public class process extends Thread {
         byte[] msg = (byte[]) keyReadReady.attachment();
         InetSocketAddress incomingAddr = (InetSocketAddress) s.socket().getRemoteSocketAddress();
         ByteBuffer buf = ByteBuffer.allocate(msg.length);
-        if (isPool(incomingAddr)){
+        if (isPool(incomingAddr)) {
             //TODO implement pool msg read
-        }else{
+        } else {
             //TODO:implement normal read
         }
         buf.wrap(msg);
@@ -142,9 +142,9 @@ public class process extends Thread {
         byte[] msg = (byte[]) keyWriteReady.attachment();
         InetSocketAddress incomingAddr = (InetSocketAddress) s.socket().getRemoteSocketAddress();
         ByteBuffer buf = ByteBuffer.wrap(msg);
-        if(isPool(incomingAddr)){
+        if (isPool(incomingAddr)) {
             //TODO implement pool msg write
-        }else {
+        } else {
             //TODO implement normal msg write
         }
         System.out.println("write a msg");
