@@ -1,7 +1,7 @@
 /**
  * Created by russelluo on 2018/2/1.
  */
-
+package Process;
 import org.omg.CosNaming.NamingContextPackage.NotFound;
 
 import java.io.IOException;
@@ -29,8 +29,9 @@ public class Process extends Thread {
     /**
      * @param number   ID assigned for this Process
      * @param address  IP this Process bound to
-     * @param poolPort Process Pool's port
      * @param port     Port this Process bound to
+     * @param poolAddress Process Pool's IP
+     * @param poolPort Process Pool's port
      */
     public Process(int number, InetAddress address, int port, InetAddress poolAddress, int poolPort) throws IOException {
         super();
@@ -53,7 +54,7 @@ public class Process extends Thread {
     @Override
     public void run() {
         running = true;
-        System.out.println("Process " + PROC_ID + "is running");
+        System.out.println("src/Process " + PROC_ID + "is running");
         Iterator<SelectionKey> iter;
         SelectionKey key;
         try {
@@ -81,43 +82,58 @@ public class Process extends Thread {
     }
 
     /**
-     * Just simply plug a key in selector
-     *
+     * Just simply plug a key in selector (and non-blocking wait for a period of time)
+     * TODO: Randomize the tim period
      * @param dst dst Process id
      * @param msg message to send
      * @throws NotFound ID is not in neighbor list
      */
-    public void unicast_send(int dst, byte[] msg) throws NotFound {
+    public void unicast_send(int dst, final byte[] msg) throws NotFound {
         if (groupMembers.containsKey(dst)) {
             final SocketChannel target = groupMembers.get(dst);
-            Timer t = new Timer().schedule(new Runnable() {
+            new Timer().schedule(new TimerTask() {
                 public void run() {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     try {
                         target.register(selector, SelectionKey.OP_WRITE, msg);//attach a msg to send
                     } catch (ClosedChannelException e) {
                         e.printStackTrace();
                     }
                 }
-            }, 1).start();
+            }, 1);
         }
         throw new NotFound();
     }
 
     /**
-     * Just simply plug a key in selector
-     *
+     * Just simply plug a key in selector (and non-blocking wait for a period of time)
+     * TODO: Randomize the tim period
      * @param src src Process id
      * @param msg buffer to receive message
      * @throws NotFound ID is not in neighbor list
      */
-    public void unicast_receive(int src, byte[] msg) throws NotFound {
+    public void unicast_receive(int src, final byte[] msg) throws NotFound {
         if (groupMembers.containsKey(src)) {
-            SocketChannel target = groupMembers.get(src);
-            try {
-                target.register(selector, SelectionKey.OP_READ, msg);//attach a msg buff to read
-            } catch (ClosedChannelException e) {
-                e.printStackTrace();
-            }
+            final SocketChannel target = groupMembers.get(src);
+            new Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    try {
+                        target.register(selector, SelectionKey.OP_READ, msg);//attach a msg buff to read
+                    } catch (ClosedChannelException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, 1);
         }
         throw new NotFound();
     }
