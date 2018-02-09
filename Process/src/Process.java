@@ -11,25 +11,28 @@ import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public class process extends Thread {
+public class Process extends Thread {
     private final int POOL_ID = 0;//default pool ID
-    private final int PROC_ID;//this process's ID
-    private final InetAddress IP;//this process's ip
-    private final int port;// this process's port
-    private boolean running = false;//if the process is running
+    private final int PROC_ID;//this Process's ID
+    private final InetAddress IP;//this Process's ip
+    private final int port;// this Process's port
+    private boolean running = false;//if the Process is running
     private ServerSocketChannel sock = ServerSocketChannel.open();
     private Selector selector = Selector.open();
-    private HashMap<Integer, SocketChannel> groupMembers = new HashMap<Integer, SocketChannel>();//map process ID's to sockets
+    private HashMap<Integer, SocketChannel> groupMembers = new HashMap<Integer, SocketChannel>();//map Process ID's to sockets
     private HashMap<InetSocketAddress, Integer> ID_INFO = new HashMap<InetSocketAddress, Integer>();
 
+
     /**
-     * @param number   ID assigned for this process
-     * @param address  IP this process bound to
+     * @param number   ID assigned for this Process
+     * @param address  IP this Process bound to
      * @param poolPort Process Pool's port
-     * @param port     Port this process bound to
+     * @param port     Port this Process bound to
      */
-    public process(int number, InetAddress address, int port, InetAddress poolAddress, int poolPort) throws IOException {
+    public Process(int number, InetAddress address, int port, InetAddress poolAddress, int poolPort) throws IOException {
         super();
         PROC_ID = number;
         IP = address;
@@ -80,18 +83,22 @@ public class process extends Thread {
     /**
      * Just simply plug a key in selector
      *
-     * @param dst dst process id
+     * @param dst dst Process id
      * @param msg message to send
      * @throws NotFound ID is not in neighbor list
      */
     public void unicast_send(int dst, byte[] msg) throws NotFound {
         if (groupMembers.containsKey(dst)) {
-            SocketChannel target = groupMembers.get(dst);
-            try {
-                target.register(selector, SelectionKey.OP_WRITE, msg);//attach a msg to send
-            } catch (ClosedChannelException e) {
-                e.printStackTrace();
-            }
+            final SocketChannel target = groupMembers.get(dst);
+            Timer t = new Timer().schedule(new Runnable() {
+                public void run() {
+                    try {
+                        target.register(selector, SelectionKey.OP_WRITE, msg);//attach a msg to send
+                    } catch (ClosedChannelException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, 1).start();
         }
         throw new NotFound();
     }
@@ -99,7 +106,7 @@ public class process extends Thread {
     /**
      * Just simply plug a key in selector
      *
-     * @param src src process id
+     * @param src src Process id
      * @param msg buffer to receive message
      * @throws NotFound ID is not in neighbor list
      */
@@ -164,11 +171,11 @@ public class process extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("New process was added");
+        System.out.println("New Process was added");
     }
 
     /**
-     * print this process's ID, IP, port number
+     * print this Process's ID, IP, port number
      */
     public void printProcessInfo() {
         System.out.printf("Process number is %d\n", this.PROC_ID);
@@ -177,7 +184,7 @@ public class process extends Thread {
     }
 
     /**
-     * @return whether the process is OK to connect
+     * @return whether the Process is OK to connect
      */
     public boolean isRunning() {
         return running;
@@ -186,10 +193,10 @@ public class process extends Thread {
     private boolean isPool(InetSocketAddress addr) {
         return ID_INFO.get(addr) == 0;
     }
-    
-    //Add socket to the groupMember of this process. Called by pool's method.
-    public void AddtoGroup(int pid, InetSocketAddress socketAddress){
-        if(this.groupMembers.containsKey(pid)) return;
+
+    //Add socket to the groupMember of this Process. Called by pool's method.
+    public void AddtoGroup(int pid, InetSocketAddress socketAddress) throws IOException {
+        if (this.groupMembers.containsKey(pid)) return;
         this.groupMembers.put(pid, SocketChannel.open(socketAddress));
         this.ID_INFO.put(socketAddress, pid);
     }
