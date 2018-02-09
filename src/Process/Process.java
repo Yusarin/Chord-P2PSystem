@@ -83,7 +83,7 @@ public class Process extends Thread {
 
     /**
      * Just simply plug a key in selector (and non-blocking wait for a period of time)
-     * TODO: Randomize the tim period
+     * TODO: Randomize the time period
      * @param dst dst Process id
      * @param msg message to send
      * @throws NotFound ID is not in neighbor list
@@ -111,7 +111,7 @@ public class Process extends Thread {
 
     /**
      * Just simply plug a key in selector (and non-blocking wait for a period of time)
-     * TODO: Randomize the tim period
+     * TODO: Randomize the time period
      * @param src src Process id
      * @param msg buffer to receive message
      * @throws NotFound ID is not in neighbor list
