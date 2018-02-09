@@ -1,4 +1,4 @@
-#Basic protocal
+# Basic protocal
 - SHUTDOWN
 
     inform current process to end immediately.
