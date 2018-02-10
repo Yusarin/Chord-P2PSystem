@@ -56,7 +56,6 @@ public class BlockingProcess implements Runnable {
                             @Override
                             public void run() {
                                 try {
-                                    System.out.println("molea");
                                     unicast_receive(ipMapId.get(s.socket().getRemoteSocketAddress()), new byte[8]);
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -102,17 +101,20 @@ public class BlockingProcess implements Runnable {
     }
 
     private void unicast_send(int dst, byte[] msg) throws IOException {
-        System.out.println("sending msg : " + new String(msg) + "to dst: " + dst);
+        System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         SocketChannel s;
+        if (dst == ID) {
+            System.out.println("You are sending message to yourself! Msg: " + new String(msg));
+            return;
+        }
         if (idMapSocket.containsKey(dst)) {
-            System.out.println("already in known socket");
             s = idMapSocket.get(dst);
-        } else {
-            System.out.println("should connect to " + idMapIp.get(dst));
+        } else {//this is first time connection
             s = SocketChannel.open();
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
             s.connect(idMapIp.get(dst));
+            System.out.println(s.isConnected());
             idMapSocket.put(dst, s);
         }
         int msg_len = msg.length;
@@ -127,13 +129,13 @@ public class BlockingProcess implements Runnable {
             ByteBuffer sizeBuf = ByteBuffer.allocate(4);
             s.read(sizeBuf);
             int length = sizeBuf.flip().getInt();
-            System.out.println("receive " + length + "bytes");
+            System.out.println("receive " + length + " bytes");
             ByteBuffer content = ByteBuffer.allocate(length);
             s.read(content);
             content.flip();
             byte[] message = new byte[content.remaining()];
             content.get(message);
-            System.out.println("Received :" + new String(message));
+            System.out.println("Received: " + new String(message));
         }
     }
 
