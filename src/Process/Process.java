@@ -2,17 +2,39 @@
  * Created by russelluo on 2018/2/1.
  */
 package Process;
+
 import org.omg.CosNaming.NamingContextPackage.NotFound;
 
 import java.io.IOException;
 import java.net.*;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
+
+enum Verb {DOWN, SEND, RECV, UNKNOWN}
+
+class ProcessEntry {
+    Verb verb;
+    int size;
+    int dst;
+    ByteBuffer header;
+    ByteBuffer dstbuf;
+    ByteBuffer sizebuf;
+    ByteBuffer content;
+
+    public ProcessEntry() {
+        header = ByteBuffer.allocate(4);
+        sizebuf = ByteBuffer.allocate(4);
+        dstbuf = ByteBuffer.allocate(4);
+        dst = -1;
+        content = null;
+        size = -1;
+        verb = Verb.UNKNOWN;
+    }
+}
 
 public class Process extends Thread {
     private final int POOL_ID = 0;//default pool ID
@@ -27,11 +49,11 @@ public class Process extends Thread {
 
 
     /**
-     * @param number   ID assigned for this Process
-     * @param address  IP this Process bound to
-     * @param port     Port this Process bound to
+     * @param number      ID assigned for this Process
+     * @param address     IP this Process bound to
+     * @param port        Port this Process bound to
      * @param poolAddress Process Pool's IP
-     * @param poolPort Process Pool's port
+     * @param poolPort    Process Pool's port
      */
     public Process(int number, InetAddress address, int port, InetAddress poolAddress, int poolPort) throws IOException {
         super();
@@ -54,7 +76,7 @@ public class Process extends Thread {
     @Override
     public void run() {
         running = true;
-        System.out.println("src/Process " + PROC_ID + "is running");
+        System.out.println("process " + PROC_ID + "is running");
         Iterator<SelectionKey> iter;
         SelectionKey key;
         try {
@@ -84,11 +106,12 @@ public class Process extends Thread {
     /**
      * Just simply plug a key in selector (and non-blocking wait for a period of time)
      * TODO: Randomize the time period
+     *
      * @param dst dst Process id
      * @param msg message to send
      * @throws NotFound ID is not in neighbor list
      */
-    public void unicast_send(int dst, final byte[] msg) throws NotFound {
+    public void unicast_send(int dst, final ProcessEntry msg) throws NotFound {
         if (groupMembers.containsKey(dst)) {
             final SocketChannel target = groupMembers.get(dst);
             new Timer().schedule(new TimerTask() {
@@ -112,11 +135,12 @@ public class Process extends Thread {
     /**
      * Just simply plug a key in selector (and non-blocking wait for a period of time)
      * TODO: Randomize the time period
+     *
      * @param src src Process id
      * @param msg buffer to receive message
      * @throws NotFound ID is not in neighbor list
      */
-    public void unicast_receive(int src, final byte[] msg) throws NotFound {
+    public void unicast_receive(int src, final ProcessEntry msg) throws NotFound {
         if (groupMembers.containsKey(src)) {
             final SocketChannel target = groupMembers.get(src);
             new Timer().schedule(new TimerTask() {
@@ -144,16 +168,65 @@ public class Process extends Thread {
      */
     private void handleRead(SelectionKey keyReadReady) {
         SocketChannel s = (SocketChannel) keyReadReady.channel();
-        byte[] msg = (byte[]) keyReadReady.attachment();
         InetSocketAddress incomingAddr = (InetSocketAddress) s.socket().getRemoteSocketAddress();
-        ByteBuffer buf = ByteBuffer.allocate(msg.length);
-        if (isPool(incomingAddr)) {
-            //TODO implement pool msg read
-        } else {
-            //TODO:implement normal read
+        ProcessEntry p = (ProcessEntry) keyReadReady.attachment();
+        try {
+            if (p == null) {
+                p = new ProcessEntry();
+            }//new entry
+            if (isPool(incomingAddr)) {
+                if (p.verb == Verb.UNKNOWN) {//not read verb yet
+                    if (!sockReadContent(s, p.header).hasRemaining()) {
+                        String v = p.header.flip().toString();
+                        switch (v) {
+                            case "DOWN":
+                                p.verb = Verb.DOWN;
+                            case "SEND":
+                                p.verb = Verb.SEND;
+                            case "RECV":
+                                p.verb = Verb.RECV;
+                        }
+                    }
+                } else if (p.verb == Verb.DOWN) {
+                    keyReadReady.cancel();
+                } else {
+                    if (p.dst == -1) {//not read destination yet
+                        if (!sockReadContent(s, p.dstbuf).hasRemaining()) {
+                            p.dst = p.dstbuf.flip().getInt();
+                        }
+                    } else {
+                        if (p.size == -1) {//not read size yet
+                            if (!sockReadContent(s, p.sizebuf).hasRemaining()) {
+                                p.size = p.sizebuf.flip().getInt();
+                                p.content = ByteBuffer.allocate(p.size);
+                            }
+                        } else {
+                            if (p.verb == Verb.RECV) {
+                                unicast_receive(p.dst, p);
+                                keyReadReady.cancel();
+                            } else if (p.verb == Verb.SEND) {
+                                if (!sockReadContent(s, p.content).hasRemaining()) {
+                                    p.content.flip();
+                                    unicast_send(p.dst, p);
+                                    keyReadReady.cancel();
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                if (!sockReadContent(s, p.content).hasRemaining()) {
+                    System.out.println("Read a msg" + p.content.toString());
+                    keyReadReady.cancel();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.out.println("Loss connection!");
+        } catch (NotFound notFound) {
+            notFound.printStackTrace();
+            System.out.println("This is not a legal process number!");
         }
-        buf.wrap(msg);
-        System.out.println("Read a msg");
         //TODO:implement this handleRead function
     }
 
@@ -162,11 +235,13 @@ public class Process extends Thread {
      */
     private void handleWrite(SelectionKey keyWriteReady) {
         SocketChannel s = (SocketChannel) keyWriteReady.channel();
-        byte[] msg = (byte[]) keyWriteReady.attachment();
         InetSocketAddress incomingAddr = (InetSocketAddress) s.socket().getRemoteSocketAddress();
-        ByteBuffer buf = ByteBuffer.wrap(msg);
+        ProcessEntry p = (ProcessEntry) keyWriteReady.attachment();
         if (isPool(incomingAddr)) {
             //TODO implement pool msg write
+            if (!sockWriteContent().hasRemaining()) {
+
+            }
         } else {
             //TODO implement normal msg write
         }
@@ -180,6 +255,7 @@ public class Process extends Thread {
     private void handleAccept(SelectionKey keyAcceptReady) {
         try {
             SocketChannel s = ((ServerSocketChannel) keyAcceptReady.channel()).accept();//incoming connection socket
+            s.configureBlocking(false);//set to unblocking-mode
             InetSocketAddress addr = (InetSocketAddress) s.socket().getRemoteSocketAddress();//remote address
             int id = ID_INFO.get(addr);//find ID of in-coming connection
             groupMembers.put(id, s);
@@ -216,4 +292,20 @@ public class Process extends Thread {
         this.groupMembers.put(pid, SocketChannel.open(socketAddress));
         this.ID_INFO.put(socketAddress, pid);
     }
+
+
+    public ByteBuffer sockReadContent(SocketChannel sock, ByteBuffer buf) throws IOException {
+        if (sock.read(buf) == -1) {
+            throw new IOException();
+        }
+        return buf;
+    }
+
+    public ByteBuffer sockWriteContent(SocketChannel sock, ByteBuffer buf) throws IOException {
+        if (sock.write(buf) == -1) {
+            throw new IOException();
+        }
+        return buf;
+    }
 }
+
