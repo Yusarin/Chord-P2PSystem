@@ -5,3 +5,9 @@
 and one thread for receiving message from its peers.
 
 - There is a master node to handle total order multicast.
+
+## build
+> gradle jar (at root dir)
+
+## run
+> ./run.sh 3
