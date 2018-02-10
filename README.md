@@ -1,12 +1,7 @@
-# Basic protocal
-- DOWN
+# Basic schema
+- Each process is a java process
 
-    inform current process to end immediately.
-- SEND <destination: int> <msg length: int> <msg: byte[]>
+- Each process has one thread to handle user Input, one thread to send message,
+and one thread for receiving message from its peers.
 
-    inform current process to send msg (msg length) to destination
-- RECV <source: int> <byte: int>
-    
-    inform current process to receive msg to destination
-## Header format
-    Verb(4bytes)+[size(4bytes)]
+- There is a master node to handle total order multicast.
