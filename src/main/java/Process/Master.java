@@ -65,6 +65,7 @@ public class Master extends BlockingProcess{
                     @Override
                     public void run() {
                         try {
+                            //Sending message to all processes.
                             while(!sequence.isEmpty()){
                                 Message current = sequence.poll();
                                 for(int i : idMapSocket.keySet()){
@@ -95,6 +96,8 @@ public class Master extends BlockingProcess{
             content.flip();
             byte[] message = new byte[content.remaining()];
             content.get(message);
+            
+            //Adding every message into the sequencer in FCFS order.
             String strmsg = new String(message);
             Message m = new Message(ipMapID.get(s.socket().getRemoteSocketAddress(), s.socket().getRemoteSocketAddress(), strmsg));
             sequence.offer(m);
