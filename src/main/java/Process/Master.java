@@ -7,17 +7,20 @@ import java.nio.*;
 
 class Message{
     int Sender_ID;
+    int header;
     InetSocketAddress Sender_addr;
     String msg;
 
-    public Message(int ID, InetSocketAddress addr, String msg){
+    public Message(int ID, InetSocketAddress addr, String msg, int header){
         this.Sender_ID = ID;
         this.Sender_addr = addr;
         this.msg = msg;
+        this.header = header;
     }
 }
 
 public class Master extends BlockingProcess{
+    int headercounter;
     Queue<Message> sequence;
     public Master() throws IOException {
         super(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay);
@@ -65,7 +68,6 @@ public class Master extends BlockingProcess{
                     @Override
                     public void run() {
                         try {
-                            //Sending message to all processes.
                             while(!sequence.isEmpty()){
                                 Message current = sequence.poll();
                                 for(int i : idMapSocket.keySet()){
@@ -96,13 +98,19 @@ public class Master extends BlockingProcess{
             content.flip();
             byte[] message = new byte[content.remaining()];
             content.get(message);
-            
-            //Adding every message into the sequencer in FCFS order.
             String strmsg = new String(message);
-            Message m = new Message(ipMapID.get(s.socket().getRemoteSocketAddress(), s.socket().getRemoteSocketAddress(), strmsg));
+            Message m = new Message(ipMapID.get(s.socket().getRemoteSocketAddress()), s.socket().getRemoteSocketAddress(), strmsg, headercounter);
+            headercounter++;
             sequence.offer(m);
             System.out.println("Sequencer Received: " + strmsg);
         }
+
+        reset_master();
+    }
+
+    public void reset_master(){
+        this.headercounter = 0;
+        this.sequence = new LinkedList<>();
     }
 
 }
