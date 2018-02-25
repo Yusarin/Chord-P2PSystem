@@ -9,8 +9,8 @@ import java.nio.*;
 public class Master extends BlockingProcess{
     int headercounter;
     Queue<Message> sequence;
-    public Master() throws IOException {
-        super(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay);
+    public Master(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
+        super(q,ID,map,min_delay,max_delay);
         headercounter = 0;
         this.sequence = new LinkedList<Message>();
     }
