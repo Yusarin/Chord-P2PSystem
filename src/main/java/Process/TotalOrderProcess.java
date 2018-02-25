@@ -62,12 +62,7 @@ public class TotalOrderProcess extends BlockingProcess{
                     @Override
                     public void run() {
                         try {
-                            while(!sequence.isEmpty()){
-                                Message current = sequence.poll();
-                                for(int i : idMapSocket.keySet()){
-                                    unicast_send(i, current.msg.getByte());
-                                }
-                            }
+                            //TODO: Send message to Master.
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
