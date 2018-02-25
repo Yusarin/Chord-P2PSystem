@@ -5,25 +5,13 @@ import java.util.*;
 import java.net.*;
 import java.nio.*;
 
-class Message{
-    int Sender_ID;
-    int header;
-    InetSocketAddress Sender_addr;
-    String msg;
-
-    public Message(int ID, InetSocketAddress addr, String msg, int header){
-        this.Sender_ID = ID;
-        this.Sender_addr = addr;
-        this.msg = msg;
-        this.header = header;
-    }
-}
 
 public class Master extends BlockingProcess{
     int headercounter;
     Queue<Message> sequence;
     public Master() throws IOException {
         super(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay);
+        headercounter = 0;
         this.sequence = new LinkedList<Message>();
     }
 
@@ -71,7 +59,7 @@ public class Master extends BlockingProcess{
                             while(!sequence.isEmpty()){
                                 Message current = sequence.poll();
                                 for(int i : idMapSocket.keySet()){
-                                    unicast_send(i, current.msg.getByte());
+                                    multicast_send(i, current);
                                 }
                             }
                         } catch (IOException e) {
@@ -106,6 +94,33 @@ public class Master extends BlockingProcess{
         }
 
         reset_master();
+    }
+
+    private void multicast_send(int dst, Message m) throws IOException {
+
+        byte[] msg = m.Serial.getBytes();
+
+        System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
+
+        SocketChannel s;
+        if (dst == ID) {
+            System.out.println("You are sending message to yourself! Msg: " + new String(msg));
+            return;
+        }
+        if (idMapSocket.containsKey(dst)) {
+            s = idMapSocket.get(dst);
+        } else {//this is first time connection
+            s = SocketChannel.open();
+            s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+            s.bind(addr);
+            s.connect(idMapIp.get(dst));
+            System.out.println(s.isConnected());
+            idMapSocket.put(dst, s);
+        }
+        int msg_len = msg.length;
+        System.out.println("msg length: " + msg_len);
+        s.write(ByteBuffer.allocate(4).putInt(msg_len).flip());
+        s.write(ByteBuffer.wrap(msg));
     }
 
     public void reset_master(){
