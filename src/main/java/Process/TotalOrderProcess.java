@@ -83,7 +83,7 @@ public class TotalOrderProcess extends BlockingProcess{
                                 System.out.println("not a legal command");
                                 return;
                             }
-                            if (parsed[0].equals("send")) {
+                            if (parsed[0].equals("msend")) {
                                 if (idMapIp.containsKey(Integer.parseInt(parsed[1]))) {
                                     unicast_send(0, parsed[2].getBytes());
                                 }
