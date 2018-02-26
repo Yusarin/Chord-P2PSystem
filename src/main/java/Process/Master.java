@@ -4,6 +4,8 @@ import java.io.*;
 import java.util.*;
 import java.net.*;
 import java.nio.*;
+import java.nio.channels.SocketChannel;
+import java.util.concurrent.BlockingQueue;
 
 
 public class Master extends BlockingProcess{
@@ -87,7 +89,7 @@ public class Master extends BlockingProcess{
             byte[] message = new byte[content.remaining()];
             content.get(message);
             String strmsg = new String(message);
-            Message m = new Message(ipMapID.get(s.socket().getRemoteSocketAddress()), s.socket().getRemoteSocketAddress(), strmsg, headercounter);
+            Message m = new Message(ipMapId.get(s.socket().getRemoteSocketAddress()), s.socket().getRemoteSocketAddress(), strmsg, headercounter);
             headercounter++;
             sequence.offer(m);
             System.out.println("Sequencer Received: " + strmsg);
