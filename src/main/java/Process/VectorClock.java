@@ -67,4 +67,16 @@ public class VectorClock implements Comparable {
             return 0;
         }
     }
+
+    @Override
+    public String toString() {
+        StringBuilder s = new StringBuilder();
+        s.append('(');
+        for (int i : clock) {
+            s.append(i);
+            s.append(';');
+        }
+        s.append(')');
+        return s.toString();
+    }
 }

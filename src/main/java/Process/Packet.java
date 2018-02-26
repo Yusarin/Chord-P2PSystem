@@ -1,27 +1,26 @@
 package Process;
 
 public class Packet implements Comparable {
-    private String msg;
-    private VectorClock clock;
+    private final String msg;
+    private final VectorClock clock;
 
     public Packet(String msg) {
         this.msg = msg;
+        this.clock = null;
+    }
+
+    public Packet(String msg, VectorClock clock) {
+        this.msg = msg;
+        this.clock = clock;
     }
 
     public String getMsg() {
         return msg;
     }
 
-    public void setMsg(String msg) {
-        this.msg = msg;
-    }
 
     public VectorClock getClock() {
         return clock;
-    }
-
-    public void setClock(VectorClock clock) {
-        this.clock = clock;
     }
 
     public byte[] serialize() {

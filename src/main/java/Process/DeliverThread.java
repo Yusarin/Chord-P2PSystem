@@ -15,10 +15,9 @@ public class DeliverThread implements Runnable {
     public void run() {
         while (true) {
             try {
-                VectorClock incoming = ((Packet) queue.peek()).getClock();
-                if (clock == null || clock.lessByOne(incoming)) {
+                if (clock == null || clock.lessByOne(((Packet) queue.peek()).getClock())) {
                     Packet p = (Packet) queue.take();
-                    System.out.println("Received: " + p.getMsg());
+                    System.out.println("Received by deliver thread: " + p.getMsg());
                     if (clock != null) // if clock is null, then it is unicast
                         clock.update(p.getClock());
                 }

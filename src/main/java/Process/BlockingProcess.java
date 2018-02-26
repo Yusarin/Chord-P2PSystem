@@ -12,16 +12,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class BlockingProcess implements Runnable {
-    private BlockingQueue writeQueue;
-    private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
-    private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
-    private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
-    private BlockingQueue deliverQueue = new LinkedBlockingQueue<String>(100);
-    private int ID;
-    private InetSocketAddress addr;
-    private ServerSocketChannel sock;
-    private int min_delay;
-    private int max_delay;
+    protected final BlockingQueue writeQueue;
+    protected final HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
+    protected final HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
+    protected final HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
+    protected final BlockingQueue deliverQueue = new LinkedBlockingQueue<String>(100);
+    protected final int ID;
+    protected final InetSocketAddress addr;
+    protected final ServerSocketChannel sock;
+    protected final int min_delay;
+    protected final int max_delay;
 
     public BlockingProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         this.addr = map.get(ID);
@@ -37,15 +37,11 @@ public class BlockingProcess implements Runnable {
         ipMapId = reverseMap(idMapIp);
     }
 
-//    public BlockingProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay, Comparator c) throws IOException {
+    //    public BlockingProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay, Comparator c) throws IOException {
 //        this(q, ID, map, min_delay, max_delay);
 //        this.deliverQueue = new PriorityBlockingQueue(100, c);
 //    }
-
-    @Override
-    public void run() {
-        System.out.println("server is up");
-        System.out.println("listening on " + sock);
+    protected void startAcceptingThread() {
         new Thread(() -> {
             while (true) {
                 try {
@@ -69,7 +65,15 @@ public class BlockingProcess implements Runnable {
                 }
             }
         }).start();
-        new Thread(new Process.DeliverThread(deliverQueue, null)).start();// start a DeliverThread
+        System.out.println("accepting thread up");
+    }
+
+    @Override
+    public void run() {
+        System.out.println("server is up");
+        System.out.println("listening on " + sock);
+        startAcceptingThread();
+        new Thread(new DeliverThread(deliverQueue, null)).start();// start a DeliverThread
         while (true) {
             try {
                 final String msg = (String) writeQueue.poll(1, TimeUnit.DAYS);
@@ -102,9 +106,7 @@ public class BlockingProcess implements Runnable {
         }
     }
 
-
-
-    private void unicast_send(int dst, byte[] msg) throws IOException {
+    protected void unicast_send(int dst, byte[] msg) throws IOException {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         SocketChannel s;
         if (dst == ID) {
@@ -127,7 +129,7 @@ public class BlockingProcess implements Runnable {
         s.write(ByteBuffer.wrap(msg));
     }
 
-    private void unicast_receive(int dst, byte[] msg) throws IOException {
+    protected void unicast_receive(int dst, byte[] msg) throws IOException {
         SocketChannel s = idMapSocket.get(dst);
         while (true) {
             ByteBuffer sizeBuf = ByteBuffer.allocate(4);
@@ -139,12 +141,11 @@ public class BlockingProcess implements Runnable {
             content.flip();
             byte[] message = new byte[content.remaining()];
             content.get(message);
-            deliverQueue.add(new String(message));
-            System.out.println("Received: " + new String(message));
+            deliverQueue.add(new Packet(new String(message)));
         }
     }
 
-    private HashMap<InetSocketAddress, Integer> reverseMap(HashMap<Integer, InetSocketAddress> map) {
+    protected HashMap<InetSocketAddress, Integer> reverseMap(HashMap<Integer, InetSocketAddress> map) {
         HashMap<InetSocketAddress, Integer> map_r = new HashMap<>();
         for (Map.Entry<Integer, InetSocketAddress> e : map.entrySet()) {
             map_r.put(e.getValue(), e.getKey());

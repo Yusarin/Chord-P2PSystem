@@ -9,18 +9,7 @@ import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
-class Config {
-    HashMap<Integer, InetSocketAddress> m;
-    int minDelay, maxDelay;
-
-    public Config(HashMap<Integer, InetSocketAddress> m, int minDelay, int maxDelay) {
-        this.m = m;
-        this.maxDelay = maxDelay;
-        this.minDelay = minDelay;
-    }
-}
-
-public class Process {
+public class UnicastDemo {
     public static void main(String[] args) throws IOException {
         System.out.println("please send msg");
         BlockingQueue q = new LinkedBlockingDeque<String>(100);
@@ -34,7 +23,7 @@ public class Process {
         }
     }
 
-    private static Config parseConfig(String filename) throws IOException {
+    protected static Config parseConfig(String filename) throws IOException {
         String reg = "\\s+";
         BufferedReader file = new BufferedReader(new FileReader(filename));
         String line = file.readLine();//first line
