@@ -100,7 +100,7 @@ public class BlockingProcess implements Runnable {
         }
     }
 
-    private void unicast_send(int dst, byte[] msg) throws IOException {
+    public void unicast_send(int dst, byte[] msg) throws IOException {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         SocketChannel s;
         if (dst == ID) {
@@ -123,7 +123,7 @@ public class BlockingProcess implements Runnable {
         s.write(ByteBuffer.wrap(msg));
     }
 
-    private void unicast_receive(int dst, byte[] msg) throws IOException {
+    public void unicast_receive(int dst, byte[] msg) throws IOException {
         SocketChannel s = idMapSocket.get(dst);
         while (true) {
             ByteBuffer sizeBuf = ByteBuffer.allocate(4);
