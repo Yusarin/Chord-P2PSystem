@@ -8,6 +8,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class BlockingProcess implements Runnable {
@@ -15,6 +16,7 @@ public class BlockingProcess implements Runnable {
     private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
     private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
     private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
+    private BlockingQueue deliverQueue = new LinkedBlockingQueue<String>(100);
     private int ID;
     private InetSocketAddress addr;
     private ServerSocketChannel sock;
@@ -35,39 +37,39 @@ public class BlockingProcess implements Runnable {
         ipMapId = reverseMap(idMapIp);
     }
 
+//    public BlockingProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay, Comparator c) throws IOException {
+//        this(q, ID, map, min_delay, max_delay);
+//        this.deliverQueue = new PriorityBlockingQueue(100, c);
+//    }
+
     @Override
     public void run() {
         System.out.println("server is up");
         System.out.println("listening on " + sock);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        SocketChannel s = sock.accept();
-                        System.out.println("accepting: " + s.socket().getRemoteSocketAddress() + " is connected? " + s.isConnected());
-                        if (!idMapSocket.containsValue(s)) {
-                            Integer newID = ipMapId.get(s.socket().getRemoteSocketAddress());
-                            System.out.println("incoming id: " + newID);
-                            assert newID != null;
-                            idMapSocket.put(newID, s);
-                        }
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    unicast_receive(ipMapId.get(s.socket().getRemoteSocketAddress()), new byte[8]);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }).start();
-                    } catch (IOException e) {
-                        e.printStackTrace();
+        new Thread(() -> {
+            while (true) {
+                try {
+                    SocketChannel s = sock.accept();
+                    System.out.println("accepting: " + s.socket().getRemoteSocketAddress() + " is connected? " + s.isConnected());
+                    if (!idMapSocket.containsValue(s)) {
+                        Integer newID = ipMapId.get(s.socket().getRemoteSocketAddress());
+                        System.out.println("incoming id: " + newID);
+                        assert newID != null;
+                        idMapSocket.put(newID, s);
                     }
+                    new Thread(() -> {
+                        try {
+                            unicast_receive(ipMapId.get(s.socket().getRemoteSocketAddress()), new byte[8]);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }).start();
+        new Thread(new Process.DeliverThread(deliverQueue, null)).start();// start a DeliverThread
         while (true) {
             try {
                 final String msg = (String) writeQueue.poll(1, TimeUnit.DAYS);
@@ -99,6 +101,8 @@ public class BlockingProcess implements Runnable {
             }
         }
     }
+
+
 
     private void unicast_send(int dst, byte[] msg) throws IOException {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
@@ -135,6 +139,7 @@ public class BlockingProcess implements Runnable {
             content.flip();
             byte[] message = new byte[content.remaining()];
             content.get(message);
+            deliverQueue.add(new String(message));
             System.out.println("Received: " + new String(message));
         }
     }

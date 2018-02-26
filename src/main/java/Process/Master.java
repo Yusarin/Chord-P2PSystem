@@ -6,6 +6,7 @@ import java.net.*;
 import java.nio.*;
 
 
+
 public class Master extends BlockingProcess{
     int headercounter;
     Queue<Message> sequence;
