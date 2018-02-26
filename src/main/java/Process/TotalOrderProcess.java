@@ -125,11 +125,6 @@ public class TotalOrderProcess extends BlockingProcess{
                     content.get(cur[2].getBytes());
                 }
             }
-
         }
     }
-
-
-
-
 }
