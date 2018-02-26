@@ -1,18 +1,30 @@
 package Process;
 
 import java.io.*;
+import java.nio.channels.ServerSocketChannel;
 import java.util.*;
 import java.net.*;
 import java.nio.*;
+import java.nio.channels.SocketChannel;
+import java.util.concurrent.BlockingQueue;
 
 public class TotalOrderProcess extends BlockingProcess{
 
     private PriorityQueue FIFO_Buffer;
     private int sequence_cursor;
+    private BlockingQueue writeQueue;
+    private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
+    private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
+    private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
+    private int ID;
+    private InetSocketAddress addr;
+    private ServerSocketChannel sock;
+    private int min_delay;
+    private int max_delay;
 
-    public TotalOrderProcess() throws IOException {
-        super(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay);
-        FIFO_Buffer = new PriorityQueue<String[]>(10，new Comparater<String[]>(){
+    public TotalOrderProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
+        super(q, ID, map,min_delay, max_delay);
+        FIFO_Buffer = new PriorityQueue<String[]>(10, new Comparator<String[]>(){
             @Override
             public int compare(String[] s1, String[] s2){
                 return Integer.parseInt(s2[1]) - Integer.parseInt(s1[1]);
@@ -91,17 +103,15 @@ public class TotalOrderProcess extends BlockingProcess{
             if(Integer.parseInt(strs[1]) > this.sequence_cursor){
                 FIFO_Buffer.offer(strs);
             }else{
-                content.get(strs[2]);
+                content.get(strs[2].getBytes());
                 this.sequence_cursor++;
-                for(String[] s = FIFO_Buffer.peek() ; s!=null && Integer.parseInt(s[1]) <= this.sequence_cursor ;this.sequence_cursor++){
-                    String[] cur = FIFO_Buffer.pop();
-                    content.get(cur[2]);
+                for(String[] tmps = (String[])FIFO_Buffer.peek() ; tmps!=null && Integer.parseInt(tmps[1]) <= this.sequence_cursor ;this.sequence_cursor++){
+                    String[] cur = (String[])FIFO_Buffer.poll();
+                    content.get(cur[2].getBytes());
                 }
             }
 
         }
-
-        reset_master();
     }
 
 
