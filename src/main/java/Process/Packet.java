@@ -1,6 +1,8 @@
 package Process;
 
-public class Packet implements Comparable {
+import java.io.Serializable;
+
+public class Packet implements Comparable, Serializable {
     private final String msg;
     private final VectorClock clock;
 
@@ -23,13 +25,9 @@ public class Packet implements Comparable {
         return clock;
     }
 
-    public byte[] serialize() {
-        return null;
-        //TODO: serialize the msg and clock
-    }
-
     @Override
     public int compareTo(Object o) {
         return clock.compareTo(((Packet) o).clock);
     }
+
 }

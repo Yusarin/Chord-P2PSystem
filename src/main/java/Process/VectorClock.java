@@ -1,5 +1,8 @@
 package Process;
 
+
+import java.util.PriorityQueue;
+
 public class VectorClock implements Comparable {
     private int length;
     private int[] clock;
@@ -78,5 +81,33 @@ public class VectorClock implements Comparable {
         }
         s.append(')');
         return s.toString();
+    }
+
+    /**
+     * Simple test for VectorClock
+     */
+    public static void main(String[] args) {
+        VectorClock c1 = new VectorClock(new int[]{1, 1, 1});
+        VectorClock c2 = new VectorClock(new int[]{1, 1, 1});
+        VectorClock c3 = new VectorClock(new int[]{1, 2, 1});
+        VectorClock c4 = new VectorClock(new int[]{1, 2, 2});
+        VectorClock c5 = new VectorClock(new int[]{1, 3, 0});
+        assert c1.compareTo(c2) == 0;
+        assert c2.compareTo(c3) < 0;
+        assert c3.compareTo(c2) > 0;
+        assert c4.compareTo(c3) > 0;
+        assert c3.lessByOne(c4);//less by one
+        assert !c2.lessByOne(c4);//not less by one
+        assert c2.compareTo(c5) < 0;
+        PriorityQueue<VectorClock> p = new PriorityQueue<>();
+        p.add(c1);
+        p.add(c2);
+        p.add(c3);
+        p.add(c4);
+        p.add(c5);
+        for (VectorClock c :
+                p) {
+            System.out.println(c);
+        }
     }
 }

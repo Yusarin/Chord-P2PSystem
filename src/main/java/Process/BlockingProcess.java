@@ -1,8 +1,12 @@
 package Process;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
+import java.net.ConnectException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -16,7 +20,7 @@ public class BlockingProcess implements Runnable {
     protected final HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
     protected final HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
     protected final HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
-    protected final BlockingQueue deliverQueue = new LinkedBlockingQueue<String>(100);
+    protected final BlockingQueue deliverQueue = new LinkedBlockingQueue<Packet>(100);
     protected final int ID;
     protected final InetSocketAddress addr;
     protected final ServerSocketChannel sock;
@@ -52,6 +56,8 @@ public class BlockingProcess implements Runnable {
                         System.out.println("incoming id: " + newID);
                         assert newID != null;
                         idMapSocket.put(newID, s);
+                    } else {
+                        System.out.println("Already accepted!");
                     }
                     new Thread(() -> {
                         try {
@@ -82,7 +88,7 @@ public class BlockingProcess implements Runnable {
                     @Override
                     public void run() {
                         try {
-                            System.out.println("delay is :" + delay);
+                            System.out.println("delay is: " + delay);
                             String parsed[] = msg.split(" ", 3);
                             if (parsed.length != 3) {
                                 System.out.println("not a legal command");
@@ -113,35 +119,50 @@ public class BlockingProcess implements Runnable {
             System.out.println("You are sending message to yourself! Msg: " + new String(msg));
             return;
         }
-        if (idMapSocket.containsKey(dst)) {
-            s = idMapSocket.get(dst);
-        } else {//this is first time connection
-            s = SocketChannel.open();
-            s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
-            s.bind(addr);
-            s.connect(idMapIp.get(dst));
-            System.out.println(s.isConnected());
-            idMapSocket.put(dst, s);
+        try {
+            if (idMapSocket.containsKey(dst)) {
+                System.out.println("already contain key");
+                s = idMapSocket.get(dst);
+            } else {//this is first time connection
+                s = SocketChannel.open();
+                s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+                s.bind(addr);
+                s.connect(idMapIp.get(dst));
+                idMapSocket.put(dst, s);
+                new Thread(() -> {
+                    try {
+                        unicast_receive(ipMapId.get(s.socket().getLocalAddress()), new byte[8]);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            }
+            System.out.println("The socket is connected?: " + s.isConnected());
+            int msg_len = msg.length;
+            System.out.println("msg length: " + msg_len);
+            System.out.println("sending to: " + s.socket().getRemoteSocketAddress());
+            ObjectOutputStream oos = new ObjectOutputStream(s.socket().getOutputStream());
+            oos.writeObject(new Packet(new String(msg)));
+        } catch (ConnectException e) {
+            e.printStackTrace();
         }
-        int msg_len = msg.length;
-        System.out.println("msg length: " + msg_len);
-        s.write(ByteBuffer.allocate(4).putInt(msg_len).flip());
-        s.write(ByteBuffer.wrap(msg));
     }
 
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
         SocketChannel s = idMapSocket.get(dst);
+        System.out.println("listening to process " + dst);
         while (true) {
-            ByteBuffer sizeBuf = ByteBuffer.allocate(4);
-            s.read(sizeBuf);
-            int length = sizeBuf.flip().getInt();
-            System.out.println("receive " + length + " bytes");
-            ByteBuffer content = ByteBuffer.allocate(length);
-            s.read(content);
-            content.flip();
-            byte[] message = new byte[content.remaining()];
-            content.get(message);
-            deliverQueue.add(new Packet(new String(message)));
+            ObjectInputStream ois = new ObjectInputStream(s.socket().getInputStream());
+            Packet p = null;
+            try {
+                System.out.println("aaaaaaaa");
+                p = (Packet) ois.readObject();
+                System.out.println("bbbbbbbb");
+                System.out.println("get new packet");
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            deliverQueue.add(p);
         }
     }
 
