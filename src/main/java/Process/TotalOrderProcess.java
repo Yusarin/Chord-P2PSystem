@@ -7,6 +7,7 @@ import java.net.*;
 import java.nio.*;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class TotalOrderProcess extends BlockingProcess{
 
@@ -68,13 +69,27 @@ public class TotalOrderProcess extends BlockingProcess{
         }).start();
         while (true) {
             try {
-                //Sending messages in the queue to all other processes in FIFO order.
+
                 final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
+                final String msg = (String) writeQueue.poll(1, TimeUnit.DAYS);
                 new Timer().schedule(new TimerTask() {
                     @Override
                     public void run() {
                         try {
-                            //TODO: Send message to Master.
+                            //Send message to Master.
+                            System.out.println("delay is :" + delay);
+                            String parsed[] = msg.split(" ", 3);
+                            if (parsed.length != 3) {
+                                System.out.println("not a legal command");
+                                return;
+                            }
+                            if (parsed[0].equals("send")) {
+                                if (idMapIp.containsKey(Integer.parseInt(parsed[1]))) {
+                                    unicast_send(0, parsed[2].getBytes());
+                                }
+                            } else {
+                                System.out.println("not a legal command");
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
