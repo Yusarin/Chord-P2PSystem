@@ -9,13 +9,24 @@ import java.util.concurrent.BlockingQueue;
 
 
 public class Master extends BlockingProcess{
-    int headercounter;
-    Queue<Message> sequence;
+    private int headercounter;
+    private Queue<Message> sequence;
+    private BlockingQueue writeQueue;
+    private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
+    private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
+    private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
+    private int ID;
+    private InetSocketAddress addr;
+    private ServerSocketChannel sock;
+    private int min_delay;
+    private int max_delay;
+    
     public Master(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         super(q,ID,map,min_delay,max_delay);
         headercounter = 0;
         this.sequence = new LinkedList<Message>();
     }
+
 
     @Override
     public void run() {
