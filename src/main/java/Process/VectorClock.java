@@ -1,9 +1,10 @@
 package Process;
 
 
+import java.io.Serializable;
 import java.util.PriorityQueue;
 
-public class VectorClock implements Comparable {
+public class VectorClock implements Comparable, Serializable {
     private int length;
     private int[] clock;
 
@@ -12,18 +13,20 @@ public class VectorClock implements Comparable {
         clock = c;
     }
 
-    public boolean lessByOne(VectorClock c) {
+    public boolean asExpected(VectorClock c) {
         boolean diffOne = false;
         for (int i = 0; i < length; ++i) {
             if (clock[i] + 1 == c.clock[i]) {
-                if (!diffOne) {
+                if (!diffOne) {// If only one position is less by 1, the incoming clock is as expected.
                     diffOne = true;
-                } else {
+                } else {//If more than one positions are less by 1, the incoming clock is not as expected.
                     return false;
                 }
+            } else if (clock[i] + 1 < c.clock[i]) {// If at position i, current clock is less by more than 1, the incoming clock is not as expected.
+                return false;
             }
         }
-        return true;
+        return diffOne;
     }
 
     public void incAt(int pos) {
@@ -96,8 +99,8 @@ public class VectorClock implements Comparable {
         assert c2.compareTo(c3) < 0;
         assert c3.compareTo(c2) > 0;
         assert c4.compareTo(c3) > 0;
-        assert c3.lessByOne(c4);//less by one
-        assert !c2.lessByOne(c4);//not less by one
+        assert c3.asExpected(c4);//less by one
+        assert !c2.asExpected(c4);//not less by one
         assert c2.compareTo(c5) < 0;
         PriorityQueue<VectorClock> p = new PriorityQueue<>();
         p.add(c1);
