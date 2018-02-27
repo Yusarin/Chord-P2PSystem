@@ -119,41 +119,41 @@ public class BlockingProcess implements Runnable {
             System.out.println("You are sending message to yourself! Msg: " + new String(msg));
             return;
         }
-        try {
-            if (idMapSocket.containsKey(dst)) {
-                System.out.println("already contain key");
-                s = idMapSocket.get(dst);
-            } else {//this is first time connection
-                s = SocketChannel.open();
-                s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
-                s.bind(addr);
-                s.connect(idMapIp.get(dst));
-                idMapSocket.put(dst, s);
-                new Thread(() -> {
-                    try {
-                        unicast_receive(ipMapId.get(s.socket().getLocalAddress()), new byte[8]);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }).start();
-            }
-            System.out.println("The socket is connected?: " + s.isConnected());
-            int msg_len = msg.length;
-            System.out.println("msg length: " + msg_len);
-            System.out.println("sending to: " + s.socket().getRemoteSocketAddress());
-            ObjectOutputStream oos = new ObjectOutputStream(s.socket().getOutputStream());
-            oos.writeObject(new Packet(new String(msg)));
-        } catch (ConnectException e) {
-            e.printStackTrace();
+        if (idMapSocket.containsKey(dst)) {
+            System.out.println("already contain key");
+            s = idMapSocket.get(dst);
+        } else {//this is first time connection
+            s = SocketChannel.open();
+            s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+            s.bind(addr);
+            s.connect(idMapIp.get(dst));
+            idMapSocket.put(dst, s);
+            new Thread(() -> {
+                try {
+                    unicast_receive(ipMapId.get(s.socket().getRemoteSocketAddress()), new byte[8]);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
         }
+        System.out.println("The socket is connected?: " + s.isConnected());
+        int msg_len = msg.length;
+        System.out.println("msg length: " + msg_len);
+        System.out.println("sending to: " + s.socket().getRemoteSocketAddress());
+        ObjectOutputStream oos = new ObjectOutputStream(s.socket().getOutputStream());
+        System.out.println("Object not send yet");
+//        oos.writeInt(1);
+        oos.flush();
+        oos.writeObject(new Packet(new String(msg)));
+        System.out.println("Object sent!");
     }
 
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
         SocketChannel s = idMapSocket.get(dst);
-        System.out.println("listening to process " + dst);
+        System.out.println("listening to process " + s.socket().getRemoteSocketAddress());
         while (true) {
-            ObjectInputStream ois = new ObjectInputStream(s.socket().getInputStream());
             Packet p = null;
+            ObjectInputStream ois = new ObjectInputStream(s.socket().getInputStream());
             try {
                 System.out.println("aaaaaaaa");
                 p = (Packet) ois.readObject();
