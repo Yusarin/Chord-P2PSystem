@@ -36,7 +36,7 @@ public class DeliverThread implements Runnable {
             try {
                 if (clock == null) { // if clock is null, then it is unicast
                     Packet p = (Packet) queue.take();
-                    LOGGER.info("Received: " + p.getMsg());
+                    LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: " + new Date());
                 } else {
                     Packet p;
                     lock.lock();// shared memory

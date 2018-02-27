@@ -34,10 +34,13 @@ public class VectorClock implements Comparable, Serializable {
     }
 
     /**
+     * Pick the larger value between two clock
      * @param c a VectorClock
      */
     public void update(VectorClock c) {
-        clock = c.clock;
+        for (int i = 0; i < length; ++i) {
+            clock[i] = clock[i] > c.clock[i] ? clock[i] : c.clock[i];
+        }
     }
 
     @Override
@@ -55,9 +58,6 @@ public class VectorClock implements Comparable, Serializable {
     @Override
     public int compareTo(Object o) {
         boolean less = false;
-        if (o == null) {
-            return 0;
-        }// unicast
         if (o instanceof VectorClock) {
             for (int i = 0; i < length; ++i) {
                 if (clock[i] < ((VectorClock) o).clock[i]) {
@@ -95,19 +95,23 @@ public class VectorClock implements Comparable, Serializable {
         VectorClock c3 = new VectorClock(new int[]{1, 2, 1});
         VectorClock c4 = new VectorClock(new int[]{1, 2, 2});
         VectorClock c5 = new VectorClock(new int[]{1, 3, 0});
+        VectorClock c6 = new VectorClock(new int[]{1, 3, 1});
         assert c1.compareTo(c2) == 0;
         assert c2.compareTo(c3) < 0;
         assert c3.compareTo(c2) > 0;
         assert c4.compareTo(c3) > 0;
-        assert c3.asExpected(c4);//less by one
-        assert !c2.asExpected(c4);//not less by one
         assert c2.compareTo(c5) < 0;
+        assert c3.asExpected(c4);//less by one
+        assert c5.asExpected(c6);//less by one
+        assert !c2.asExpected(c4);//not less by one
+        assert !c1.asExpected(c5);//less by two
         PriorityQueue<VectorClock> p = new PriorityQueue<>();
         p.add(c1);
         p.add(c2);
         p.add(c3);
         p.add(c4);
         p.add(c5);
+        p.add(c6);
         for (VectorClock c :
                 p) {
             System.out.println(c);

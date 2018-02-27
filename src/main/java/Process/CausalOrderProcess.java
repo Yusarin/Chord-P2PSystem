@@ -89,7 +89,7 @@ public class CausalOrderProcess extends BlockingProcess {
         LOGGER.finest("sending to: " + s.getRemoteSocketAddress());
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush?
-        oos.writeObject(new Packet(selfID, new String(msg), clock));
+        oos.writeObject(new Packet(selfID, new String(msg), clock));//Add a clock to the end
     }
 
     @Override
