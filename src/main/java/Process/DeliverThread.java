@@ -41,7 +41,9 @@ public class DeliverThread implements Runnable {
                     Packet p;
                     lock.lock();// shared memory
                     while (queue.peek() == null || !clock.asExpected(((Packet) queue.peek()).getClock())) {
-                        condition.await();
+                        if (queue.peek() != null)
+                            LOGGER.fine("top packet clock: " + ((Packet) queue.peek()).getClock());
+                        condition.await();//block deliver thread if no expected packet arrives.
                     }
                     p = (Packet) queue.take();
                     updateClock(p.getClock());

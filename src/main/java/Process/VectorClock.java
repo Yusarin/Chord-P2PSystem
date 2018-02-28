@@ -2,6 +2,7 @@ package Process;
 
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
 import java.util.PriorityQueue;
 
 public class VectorClock implements Comparable, Serializable {
@@ -35,6 +36,7 @@ public class VectorClock implements Comparable, Serializable {
 
     /**
      * Pick the larger value between two clock
+     *
      * @param c a VectorClock
      */
     public void update(VectorClock c) {
@@ -74,6 +76,10 @@ public class VectorClock implements Comparable, Serializable {
         }
     }
 
+    public VectorClock copy() {
+        return new VectorClock(clock.clone());
+    }
+
     @Override
     public String toString() {
         StringBuilder s = new StringBuilder();
@@ -96,6 +102,7 @@ public class VectorClock implements Comparable, Serializable {
         VectorClock c4 = new VectorClock(new int[]{1, 2, 2});
         VectorClock c5 = new VectorClock(new int[]{1, 3, 0});
         VectorClock c6 = new VectorClock(new int[]{1, 3, 1});
+        VectorClock c7 = new VectorClock(new int[]{0, 10, 0});
         assert c1.compareTo(c2) == 0;
         assert c2.compareTo(c3) < 0;
         assert c3.compareTo(c2) > 0;
@@ -103,6 +110,8 @@ public class VectorClock implements Comparable, Serializable {
         assert c2.compareTo(c5) < 0;
         assert c3.asExpected(c4);//less by one
         assert c5.asExpected(c6);//less by one
+        assert c5.asExpected(c3);
+        assert c6.asExpected(c4);
         assert !c2.asExpected(c4);//not less by one
         assert !c1.asExpected(c5);//less by two
         PriorityQueue<VectorClock> p = new PriorityQueue<>();
@@ -112,6 +121,7 @@ public class VectorClock implements Comparable, Serializable {
         p.add(c4);
         p.add(c5);
         p.add(c6);
+        p.add(c7);
         for (VectorClock c :
                 p) {
             System.out.println(c);

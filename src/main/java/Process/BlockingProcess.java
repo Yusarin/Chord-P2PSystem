@@ -6,27 +6,26 @@ import java.io.ObjectOutputStream;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class BlockingProcess implements Runnable {
     protected final BlockingQueue writeQueue;
-    protected final HashMap<Integer, Socket> idMapSocket = new HashMap<>();//map id to socket
-    protected final HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
-    protected final HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
+    protected final Map<Integer, Socket> idMapSocket = new ConcurrentHashMap<>();//map id to socket
+    protected final Map<InetSocketAddress, Integer> ipMapId;//map ip to id
+    protected final Map<Integer, InetSocketAddress> idMapIp;//map id to ip
     protected BlockingQueue deliverQueue = new LinkedBlockingQueue<Packet>(100);
     protected final int selfID;
     protected final InetSocketAddress addr;
     protected final ServerSocket sock;
     protected final int min_delay;
     protected final int max_delay;
-    protected final Lock mapAccessLock = new ReentrantLock();
     protected static final Logger LOGGER = Logger.getLogger(CausalOrderProcess.class.getName());
 
-    public BlockingProcess(BlockingQueue q, int selfID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
+    public BlockingProcess(BlockingQueue q, int selfID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         this.addr = map.get(selfID);
         sock = new ServerSocket();
         sock.setOption(StandardSocketOptions.SO_REUSEADDR, true);
@@ -50,12 +49,10 @@ public class BlockingProcess implements Runnable {
                     Integer newID;
                     System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
                     if (!idMapSocket.containsValue(s)) {
-                        synchronized (mapAccessLock) {
-                            newID = ipMapId.get(s.getRemoteSocketAddress());
-                            System.out.println("incoming id: " + newID);
-                            assert newID != null;
-                            idMapSocket.put(newID, s);
-                        }
+                        newID = ipMapId.get(s.getRemoteSocketAddress());
+                        System.out.println("incoming id: " + newID);
+                        assert newID != null;
+                        idMapSocket.put(newID, s);
                         new Thread(() -> {
                             try {
                                 unicast_receive(newID, new byte[8]);
@@ -117,17 +114,14 @@ public class BlockingProcess implements Runnable {
     protected final Socket handleSendConnection(int dst) throws IOException {
         Socket s;
         if (idMapSocket.containsKey(dst)) {
-            System.out.println("already contain key");
             s = idMapSocket.get(dst);
         } else {//this is first time connection
             s = new Socket();
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
             InetSocketAddress id;
-            synchronized (mapAccessLock) {
-                idMapSocket.put(dst, s);
-                id = idMapIp.get(dst);
-            }
+            idMapSocket.put(dst, s);
+            id = idMapIp.get(dst);
             s.connect(id);
             new Thread(() -> {
                 try {
@@ -158,10 +152,7 @@ public class BlockingProcess implements Runnable {
     }
 
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
-        Socket s;
-        synchronized (mapAccessLock) {
-            s = idMapSocket.get(dst);
-        }
+        Socket s = idMapSocket.get(dst);
         System.out.println("listening to process " + s.getRemoteSocketAddress());
         while (true) {
             Packet p = null;
@@ -176,8 +167,8 @@ public class BlockingProcess implements Runnable {
         }
     }
 
-    protected HashMap<InetSocketAddress, Integer> reverseMap(HashMap<Integer, InetSocketAddress> map) {
-        HashMap<InetSocketAddress, Integer> map_r = new HashMap<>();
+    protected Map<InetSocketAddress, Integer> reverseMap(Map<Integer, InetSocketAddress> map) {
+        Map<InetSocketAddress, Integer> map_r = new ConcurrentHashMap<>();
         for (Map.Entry<Integer, InetSocketAddress> e : map.entrySet()) {
             map_r.put(e.getValue(), e.getKey());
         }

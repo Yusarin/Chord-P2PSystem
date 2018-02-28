@@ -1,25 +1,36 @@
 package Process;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class UnicastDemo {
     public static void main(String[] args) throws IOException {
         System.out.println("please send msg");
         BlockingQueue q = new LinkedBlockingDeque<String>(100);
-        int id = Integer.parseInt(args[0]);
-        Config config = parseConfig(args[1]);
-        new Thread(new BlockingProcess(q, id, config.m, config.minDelay, config.maxDelay)).start();
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        while (true) {
-            String msg = br.readLine();
-            q.add(msg);
+        try {
+            int id = Integer.parseInt(args[0]);
+            Config config = parseConfig(args[1]);
+            new Thread(new BlockingProcess(q, id, config.m, config.minDelay, config.maxDelay)).start();
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            if (args.length > 2) {
+                System.out.println("reading script...");
+                ArrayList<String> lines = readScript(args[2]);
+                for (String line : lines) {
+                    q.add(line);
+                }
+            }
+            while (true) {
+                String msg = br.readLine();
+                q.add(msg);
+            }
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Please include ID, config file, and optional script");
         }
     }
 
@@ -33,7 +44,7 @@ public class UnicastDemo {
         Integer min = Integer.parseInt(delays[1]);
         Integer max = Integer.parseInt(delays[3]);
         if (max == null || min == null) throw new IOException("wrong formatted config file");
-        HashMap<Integer, InetSocketAddress> map = new HashMap<>();
+        ConcurrentHashMap<Integer, InetSocketAddress> map = new ConcurrentHashMap<>();
         line = file.readLine();
         while (line != null) {
             String[] peer = line.split(reg);
@@ -46,5 +57,23 @@ public class UnicastDemo {
             line = file.readLine();
         }
         return new Config(map, min, max);
+    }
+
+    protected static ArrayList<String> readScript(String path) {
+        try {
+            BufferedReader fr = new BufferedReader(new FileReader(path));
+            ArrayList<String> lines = new ArrayList<>();
+            String line = fr.readLine();
+            while (line != null) {
+                lines.add(line);
+                line = fr.readLine();
+            }
+            return lines;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -2,12 +2,13 @@ package Process;
 
 import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 class Config {
-    HashMap<Integer, InetSocketAddress> m;
+    ConcurrentHashMap<Integer, InetSocketAddress> m;
     int minDelay, maxDelay;
 
-    public Config(HashMap<Integer, InetSocketAddress> m, int minDelay, int maxDelay) {
+    public Config(ConcurrentHashMap<Integer, InetSocketAddress> m, int minDelay, int maxDelay) {
         this.m = m;
         this.maxDelay = maxDelay;
         this.minDelay = minDelay;
