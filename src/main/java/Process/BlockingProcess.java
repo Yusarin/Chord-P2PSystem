@@ -41,6 +41,9 @@ public class BlockingProcess implements Runnable {
         LOGGER.info("Self PID: " + selfID);
     }
 
+    /**
+     * This thread will spawn a thread to listen to a socket if a new connection is accepted.
+     */
     protected void startAcceptingThread() {
         new Thread(() -> {
             while (true) {
@@ -71,6 +74,12 @@ public class BlockingProcess implements Runnable {
         System.out.println("accepting thread up");
     }
 
+    /**
+     * This thread spawn three new thread
+     * 1.Accept new connection
+     * 2.Deliver packet
+     * 3.Send packet
+     */
     @Override
     public void run() {
         System.out.println("server is up");
@@ -111,6 +120,14 @@ public class BlockingProcess implements Runnable {
         }
     }
 
+    /**
+     * This function handle connection (client side). If this is the first message, the new established
+     * Socket need to be added to global maps. Otherwise, it just pull out the record from the map.
+     *
+     * @param dst
+     * @return
+     * @throws IOException
+     */
     protected final Socket handleSendConnection(int dst) throws IOException {
         Socket s;
         if (idMapSocket.containsKey(dst)) {
@@ -135,6 +152,13 @@ public class BlockingProcess implements Runnable {
     }
 
 
+    /**
+     * Handle unicast send. There is not much to say here.
+     *
+     * @param dst
+     * @param msg
+     * @throws IOException
+     */
     protected void unicast_send(int dst, byte[] msg) throws IOException {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         Socket s;
@@ -151,6 +175,13 @@ public class BlockingProcess implements Runnable {
         oos.writeObject(new Packet(selfID, new String(msg)));
     }
 
+    /**
+     * Handle receive. Once see a packet, put the packet in the queue
+     *
+     * @param dst
+     * @param msg
+     * @throws IOException
+     */
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
         System.out.println("listening to process " + s.getRemoteSocketAddress());
@@ -167,7 +198,13 @@ public class BlockingProcess implements Runnable {
         }
     }
 
-    protected Map<InetSocketAddress, Integer> reverseMap(Map<Integer, InetSocketAddress> map) {
+    /**
+     * A helper function to "reverse" a map.
+     *
+     * @param map
+     * @return
+     */
+    protected static Map<InetSocketAddress, Integer> reverseMap(Map<Integer, InetSocketAddress> map) {
         Map<InetSocketAddress, Integer> map_r = new ConcurrentHashMap<>();
         for (Map.Entry<Integer, InetSocketAddress> e : map.entrySet()) {
             map_r.put(e.getValue(), e.getKey());

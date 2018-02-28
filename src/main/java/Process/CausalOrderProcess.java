@@ -18,8 +18,18 @@ import java.util.logging.Logger;
 
 public class CausalOrderProcess extends BlockingProcess {
     private final VectorClock clock;
+    /**
+     * The clock position represent this process
+     */
     private final int clockPos;
+    /**
+     * The clock shared between multiple threads, so we need a lock
+     */
     private final Lock lock = new ReentrantLock();
+
+    /**
+     * Correspond condition variable
+     */
     private final Condition condition = lock.newCondition();
 
     public CausalOrderProcess(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
@@ -31,6 +41,12 @@ public class CausalOrderProcess extends BlockingProcess {
         LOGGER.info("Current vector clock:" + clock);
     }
 
+    /**
+     * This thread spawn three new thread
+     * 1.Accept new connection
+     * 2.Deliver packet
+     * 3.Send packet
+     */
     @Override
     public void run() {
         startAcceptingThread();
@@ -46,7 +62,6 @@ public class CausalOrderProcess extends BlockingProcess {
                 } else if (parsed[0].equals("msend")) {
                     LOGGER.finest("Casual multicast");
                     String[] parseDelay = parsed[1].split("\\s*delay\\s*", 2);
-                    final Map delay;
                     HashMap<Integer, Long> customizeDelay = null;
                     byte[] msgBytes;
                     boolean random = true;
@@ -64,20 +79,7 @@ public class CausalOrderProcess extends BlockingProcess {
                     } else {
                         msgBytes = parsed[1].getBytes();
                     }
-                    delay = customizeDelay;
-                    for (Map.Entry<Integer, InetSocketAddress> entry :
-                            idMapIp.entrySet()) {
-                        new Timer().schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                try {
-                                    unicast_send(entry.getKey(), msgBytes, copyClock);
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }, random ? (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay : (long) delay.get(entry.getKey()));
-                    }//Send to everyone with different
+                    causalSend(msgBytes, customizeDelay, copyClock);
                 } else {
                     LOGGER.severe("not a legal command");
                 }
@@ -89,12 +91,27 @@ public class CausalOrderProcess extends BlockingProcess {
         }
     }
 
-//    protected void causalSend(byte[] msg, VectorClock c) throws IOException {
-//        for (Map.Entry<Integer, InetSocketAddress> entry :
-//                idMapIp.entrySet()) {
-//            unicast_send(entry.getKey(), msg, c);
-//        }
-//    }
+    /**
+     * This function handle causal multicast send
+     * @param msg message
+     * @param delay Map from id to delay time
+     * @param c the copy of clock to attach to the packet
+     */
+    protected void causalSend(byte[] msg, HashMap<Integer, Long> delay, VectorClock c) {
+        for (Map.Entry<Integer, InetSocketAddress> entry :
+                idMapIp.entrySet()) {
+            new Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        unicast_send(entry.getKey(), msg, c);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, delay == null ? (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay : (long) delay.get(entry.getKey()));
+        }//Send to everyone with different
+    }
 
     protected void unicast_send(int dst, byte[] msg, VectorClock c) throws IOException {
         LOGGER.finest("sending msg : " + new String(msg) + " to dst: " + dst);
@@ -117,11 +134,18 @@ public class CausalOrderProcess extends BlockingProcess {
                 break;
             } catch (Exception e) {
                 e.printStackTrace();
-                continue;// if network is wrong, keep sending
+                continue;// if network is bad, keep sending until the packet sent successfully.
             }
         }
     }
 
+    /**
+     * Override the unicast_receive to accommodate vector clock
+     *
+     * @param dst destination of receive
+     * @param msg useless here
+     * @throws IOException
+     */
     @Override
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);

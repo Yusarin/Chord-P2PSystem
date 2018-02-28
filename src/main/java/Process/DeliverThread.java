@@ -13,10 +13,25 @@ public class DeliverThread implements Runnable {
     private final Condition condition;
     private final Logger LOGGER;
 
+    /**
+     * For unicast
+     *
+     * @param queue
+     * @param c
+     */
     public DeliverThread(BlockingQueue queue, VectorClock c) {
         this(queue, c, null, null, Logger.getLogger(DeliverThread.class.getName()));
     }
 
+    /**
+     * For causal multicast
+     *
+     * @param queue
+     * @param c
+     * @param lock
+     * @param condition
+     * @param LOGGER
+     */
     public DeliverThread(BlockingQueue queue, VectorClock c, Lock lock, Condition condition, Logger LOGGER) {
         this.queue = queue;
         this.clock = c;
@@ -25,11 +40,25 @@ public class DeliverThread implements Runnable {
         this.LOGGER = LOGGER;
     }
 
+    /**
+     * update the clock
+     * @param c incoming clock
+     */
     private synchronized void updateClock(VectorClock c) {
         LOGGER.finest("updating clock");
         clock.update(c);
     }
 
+    /**
+     * Run the deliver thread.
+     *
+     * If the clock variable is null, then this thread is unicast_mode. It basically ignore the vector clock
+     * and print message immediately.
+     *
+     * If the clock is not null, then this thread is in causal_mode. It doesn't deliver the packet immediately.
+     * Each time this thread get signalled, it check the top packet. If the packet has expected packet (implemented by
+     * asExpected method of class VecterClock), then it deliver and update the shared clock within the critical section..
+     */
     @Override
     public void run() {
         while (true) {
@@ -51,7 +80,6 @@ public class DeliverThread implements Runnable {
                     LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: " + new Date());
                     LOGGER.info("Current VectorClock: " + clock);
                 }
-                //TODO: run the deliver thread
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

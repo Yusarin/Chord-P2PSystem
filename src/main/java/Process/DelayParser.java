@@ -46,6 +46,10 @@ public class DelayParser {
         return result;
     }
 
+    /**
+     * Simple test
+     * @param args
+     */
     public static void main(String[] args) {
         DelayParser dp = new DelayParser("3=1000,2=10", 4, 4);
         Map m = dp.parse();
