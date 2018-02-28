@@ -14,7 +14,8 @@ public class CausalMulticastDemo extends UnicastDemo {
         try {
             int id = Integer.parseInt(args[0]);
             Config config = UnicastDemo.parseConfig(args[1]);
-            new Thread(new CausalOrderProcess(q, id, config.m, config.minDelay, config.maxDelay)).start();
+            if (id != 0)
+                new Thread(new CausalOrderProcess(q, id, config.m, config.minDelay, config.maxDelay)).start();
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             if (args.length > 2) {
                 System.out.println("reading script...");
