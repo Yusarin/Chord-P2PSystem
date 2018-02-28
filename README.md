@@ -8,7 +8,7 @@ and one thread for receiving message from its peers.
 
 - Each process maintain an internal vector clock
 
-##Requirement
+## Requirement
 - MacOs or Linux
 
 - Java 9 installed
