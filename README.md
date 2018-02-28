@@ -19,33 +19,45 @@ and one thread for receiving message from its peers.
 
 
 ## Build
-> gradle jar (at root dir)
+```bash
+gradle jar #(at root dir)
+```
 
 ## Run
 Run CausalMulticastDemo by .jar after build
-> java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo \<id\> configuration [script]
+```bash
+java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo <id> configuration [script]
+```
 
 Run UnicastDemo by .jar after build
-> java -cp build/libs/CS425MP1.jar Process.UnicastDemo \<id\> configuration
-
-> ./UnicastRun.sh 4(the number of process, has to be consistent to configuration file)
-
-> ./CausalMulticastRun.sh 4(the number of process, has to be consistent to configuration 
-file) [script (read startup command from ./script directory)]
+```bash
+java -cp build/libs/CS425MP1.jar Process.UnicastDemo \<id\> configuration
+```
+```bash
+./UnicastRun.sh 4 #(the number of process, has to be consistent to configuration file)
+```
+```bash
+./CausalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
+file) [script] #(read startup command from ./script directory)
+```
 
 ## Available command
 
 ### Unicast
-> send \<id\> \<message\>
+```
+send <id> <message>
+```
 
 ### Causal multicast
 
-> sleep (sleep for 1000ms)
+```
+sleep (sleep for 1000ms)
 
-> clock (check current vector clock)
+clock (check current vector clock)
 
-> msend \<message\> [delay id=delay,id=delay...(the last delay will be used to other unspecified
-processes, current thread is always 0 (I think that make sense))]
+msend <message> [delay id=delay,id=delay...
+(the last delay will be used to other unspecified processes, current thread is always 0 (I think that make sense))]
+```
 
 ### Exit
 Just press Ctrl+C
