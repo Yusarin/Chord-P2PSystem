@@ -11,15 +11,15 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class BlockingProcess implements Runnable {
-    private BlockingQueue writeQueue;
-    private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
-    private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
-    private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
-    private int ID;
-    private InetSocketAddress addr;
-    private ServerSocketChannel sock;
-    private int min_delay;
-    private int max_delay;
+    protected BlockingQueue writeQueue;
+    protected HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
+    protected HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
+    protected HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
+    protected int ID;
+    protected InetSocketAddress addr;
+    protected ServerSocketChannel sock;
+    protected int min_delay;
+    protected int max_delay;
 
     public BlockingProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         this.addr = map.get(ID);
