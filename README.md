@@ -16,7 +16,7 @@ and one thread for receiving message from its peers.
 - Gradle installed
 
 ## Project structure
-
+TODO
 
 ## Build
 ```bash
@@ -55,8 +55,9 @@ sleep (sleep for 1000ms)
 
 clock (check current vector clock)
 
-msend <message> [delay id=delay,id=delay...
-(the last delay will be used to other unspecified processes, current thread is always 0 (I think that make sense))]
+msend <message> [delay id=delay,id=delay...]
+(the last delay will be used to other unspecified processes, current thread is always 0 (I think that make sense)
+If not specified delay explicitly, random delay will be used)
 ```
 
 ### Exit
