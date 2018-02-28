@@ -1,4 +1,4 @@
-package test;
+package Process;
 
 import java.io.*;
 import java.nio.channels.ServerSocketChannel;
@@ -13,15 +13,6 @@ public class TotalOrderProcess extends BlockingProcess{
 
     private PriorityQueue FIFO_Buffer;
     private int sequence_cursor;
-    private BlockingQueue writeQueue;
-    private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
-    private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
-    private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
-    private int ID;
-    private InetSocketAddress addr;
-    private ServerSocketChannel sock;
-    private int min_delay;
-    private int max_delay;
 
     public TotalOrderProcess(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         super(q, ID, map,min_delay, max_delay);
@@ -78,15 +69,14 @@ public class TotalOrderProcess extends BlockingProcess{
                         try {
                             //Send message to Master.
                             System.out.println("delay is :" + delay);
-                            String parsed[] = msg.split(" ", 3);
-                            if (parsed.length != 3) {
+                            String parsed[] = msg.split(" ",2);
+                            if (parsed.length != 2) {
                                 System.out.println("not a legal command");
                                 return;
                             }
                             if (parsed[0].equals("msend")) {
-                                if (idMapIp.containsKey(Integer.parseInt(parsed[1]))) {
-                                    unicast_send(0, parsed[2].getBytes());
-                                }
+                                    System.out.println("Sending:"+parsed[1]);
+                                    unicast_send(0, parsed[1].getBytes());
                             } else {
                                 System.out.println("not a legal command");
                             }
