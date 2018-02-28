@@ -34,7 +34,7 @@ public class Process {
         }
     }
 
-    private static Config parseConfig(String filename) throws IOException {
+    public static Config parseConfig(String filename) throws IOException {
         String reg = "\\s+";
         BufferedReader file = new BufferedReader(new FileReader(filename));
         String line = file.readLine();//first line
