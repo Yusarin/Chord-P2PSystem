@@ -1,4 +1,4 @@
-package test;
+package Process;
 
 
 import java.io.*;
@@ -8,28 +8,22 @@ import java.net.*;
 import java.nio.*;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 public class Master extends BlockingProcess{
     private int headercounter;
-    private Queue<Message> sequence;
-    private BlockingQueue writeQueue;
-    private HashMap<Integer, SocketChannel> idMapSocket = new HashMap<>();//map id to socket
-    private HashMap<InetSocketAddress, Integer> ipMapId;//map ip to id
-    private HashMap<Integer, InetSocketAddress> idMapIp;//map id to ip
-    private int ID;
-    private InetSocketAddress addr;
-    private ServerSocketChannel sock;
-    private int min_delay;
-    private int max_delay;
+    private BlockingQueue<Message> sequence;
+
     public Master(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         super(q,ID,map,min_delay,max_delay);
         headercounter = 0;
-        this.sequence = new LinkedList<Message>();
+        this.sequence = new LinkedBlockingDeque<Message>(100);
     }
 
     @Override
     public void run() {
-        System.out.println("sequencer is up");
+        System.out.println("Sequencer is up");
         //System.out.println("listening on " + sock);
         new Thread(new Runnable() {
             @Override
@@ -61,28 +55,35 @@ public class Master extends BlockingProcess{
             }
         }).start();
         while (true) {
-                //Sending messages in the queue to all other processes in FIFO order.
-                final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
-                new Timer().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
-                        try {
-                            while(!sequence.isEmpty()){
-                                Message current = sequence.poll();
-                                for(int i : idMapSocket.keySet()){
+            //Sending messages in the queue to all other processes in FIFO order.
+            try {
+                while (!sequence.isEmpty()) {
+                    Message current = sequence.poll(1, TimeUnit.DAYS);
+
+                    final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
+                    new Timer().schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            try {
+                                for (int i : idMapSocket.keySet()) {
                                     multicast_send(i, current);
                                 }
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
                         }
-                    }
-                }, delay);
+                    }, delay);
+                }
             }
+            catch (InterruptedException e){
+                e.printStackTrace();
+            }
+
         }
+    }
     
 
-    public String unicast_receive(int dst, byte[] msg) throws IOException {
+    public void unicast_receive(int dst, byte[] msg) throws IOException {
         SocketChannel s = idMapSocket.get(dst);
         while (true) {
             ByteBuffer sizeBuf = ByteBuffer.allocate(4);
@@ -100,8 +101,6 @@ public class Master extends BlockingProcess{
             sequence.offer(m);
             System.out.println("Sequencer Received: " + strmsg);
         }
-
-        reset_master();
     }
 
     private void multicast_send(int dst, Message m) throws IOException {
@@ -133,7 +132,6 @@ public class Master extends BlockingProcess{
 
     public void reset_master(){
         this.headercounter = 0;
-        this.sequence = new LinkedList<>();
+        this.sequence = new LinkedBlockingDeque<Message>();
     }
-
 }
