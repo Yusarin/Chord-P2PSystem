@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+gradle jar
 for id in $(seq 1 $1)
 do
 echo "$id"

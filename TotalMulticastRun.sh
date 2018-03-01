@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+gradle jar
 if [ $(uname) = "Darwin" ]; then
     osascript -e "tell application \"Terminal\" to do script \"cd $PWD && java -cp build/libs/CS425MP1.jar Process.MasterUp 0 TotalConfiguration\""
 else
