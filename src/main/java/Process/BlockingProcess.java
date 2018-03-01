@@ -50,7 +50,7 @@ public class BlockingProcess implements Runnable {
                 try {
                     Socket s = sock.accept();
                     Integer newID;
-                    System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
+                    LOGGER.finest("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
                     if (!idMapSocket.containsValue(s)) {
                         newID = ipMapId.get(s.getRemoteSocketAddress());
                         System.out.println("incoming id: " + newID);

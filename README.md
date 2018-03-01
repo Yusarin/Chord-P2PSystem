@@ -46,23 +46,33 @@ gradle jar #(at root dir)
 ```
 
 ## Run
-Run CausalMulticastDemo by .jar after build
+- Run CausalMulticastDemo by .jar after build
 ```bash
 java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo <id> CausalConfiguration [script]
 ```
 
-Run UnicastDemo by .jar after build
+- Run TotalOrderDemo by .jar after build
 ```bash
-java -cp build/libs/CS425MP1.jar Process.UnicastDemo <id> UnicastConfiguration
+java -cp build/libs/CS425MP1.jar Process.TotalOrderDemo <id> TotalConfiguration [script]
 ```
+
+- Run UnicastDemo by .jar after build
+```bash
+java -cp build/libs/CS425MP1.jar Process.UnicastDemo <id> UnicastConfiguration [script]
+```
+
+- Startup 4 Unicast processes
 ```bash
 ./UnicastRun.sh 4 #(the number of process, has to be consistent to configuration file)
 ```
+
+- Startup 4 Total order multicast processes
 ```bash
 ./TotalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
 file) [script directory name] #(read startup command from ./TotalMulticastScript directory)
 ```
 
+- Startup 4 Causal order multicast processes
 ```bash
 ./CausalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
 file) [script directory name] #(read startup command from ./CausalMulticastScript directory)
