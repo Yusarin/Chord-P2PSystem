@@ -77,7 +77,7 @@ public class TotalOrderProcess extends BlockingProcess {
                 final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
                 final String msg = (String) writeQueue.poll(1, TimeUnit.DAYS);
                 String parsed[] = msg.split(" ", 3);
-                final long customdelay = parsed.length == 3 ? -1 : Integer.parseInt(parsed[2]);
+                final long customdelay = parsed.length == 3 ? Integer.parseInt(parsed[2]) : -1;
                 final long realdelay = customdelay == -1 ? delay : customdelay;
                 new Timer().schedule(new TimerTask() {
                     @Override
