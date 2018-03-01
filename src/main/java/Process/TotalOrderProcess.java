@@ -10,9 +10,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+
 public class TotalOrderProcess extends BlockingProcess {
 
+    /**
+     * A FIFO queue to store buffering message.
+     */
     private PriorityQueue FIFO_Buffer;
+
+    /**
+     * To tell message with which header should be delivered next.
+     */
     private int sequence_cursor;
 
     public TotalOrderProcess(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
@@ -26,6 +34,11 @@ public class TotalOrderProcess extends BlockingProcess {
         sequence_cursor = 1;
     }
 
+    /**
+     * Launch a total order process, and then start listening on other processes.
+     * Wait for the console command to send, once receive a msend command, send the message
+     * to the master node.
+     */
     @Override
     public void run() {
         System.out.println("A TotalOrderProcess is up");
@@ -89,6 +102,14 @@ public class TotalOrderProcess extends BlockingProcess {
         }
     }
 
+    /**
+     * This function handles connection (client side). If this is the first message, the new established
+     * Socket need to be added to global maps. Otherwise, it just pull out the record from the map.
+     *
+     * @param dst
+     * @return
+     * @throws IOException
+     */
     public Socket MhandleSendConnection(int dst) throws IOException {
         Socket s;
         if (idMapSocket.containsKey(dst)) {
@@ -113,6 +134,13 @@ public class TotalOrderProcess extends BlockingProcess {
     }
 
 
+    /**
+     * Send message to the corresponding process with ID=dst.
+     *
+     * @param dst
+     * @param msg
+     * @throws IOException
+     */
     protected void multicast_send(int dst, byte[] msg) throws IOException {
         Socket s;
         if (dst == selfID) {
@@ -121,10 +149,20 @@ public class TotalOrderProcess extends BlockingProcess {
         }
         s = MhandleSendConnection(dst);
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
-        oos.flush();// TODO:Do we need flush?
+        oos.flush();
         oos.writeObject(new Message(selfID, addr, new String(msg), 0));
     }
 
+    /**
+     * Handle multicast receive, once called, receives message from all processes, once received a message,
+     * compare its header with the current cursor, if header equals the cursor, then deliver the message
+     * immediately. Otherwise, we put the message into our buffer queue. And to see whether to poll it when
+     * the cursor updates.
+     *
+     * @param dst
+     * @param msg not used
+     * @throws IOException
+     */
     private void multicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
         while (true) {
