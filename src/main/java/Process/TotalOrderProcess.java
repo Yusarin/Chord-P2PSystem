@@ -75,7 +75,7 @@ public class TotalOrderProcess extends BlockingProcess {
                                 return;
                             }
                             if (parsed[0].equals("msend")) {
-                                System.out.println("Sending:" + parsed[1]);
+
                                 multicast_send(0, parsed[1].getBytes());
                             } else {
                                 System.out.println("not a legal command");
@@ -145,16 +145,15 @@ public class TotalOrderProcess extends BlockingProcess {
             System.out.println(str);
             String[] strs = str.split(",");
             if (Integer.parseInt(strs[1]) > this.sequence_cursor) {
-                System.out.println("Buffering message");
+                //System.out.println("Buffering message");
                 FIFO_Buffer.offer(strs);
             } else {
-                System.out.println("Deliver message" + strs[2]);
+                System.out.println("Reveive Message " + strs[2] + "From Process "+ m.Sender_ID + "at time "+ Calendar.getInstance().getTime());
                 this.sequence_cursor++;
                 for (String[] tmps = (String[]) FIFO_Buffer.peek(); tmps != null && Integer.parseInt(tmps[1]) <= this.sequence_cursor && !FIFO_Buffer.isEmpty(); this.sequence_cursor++) {
                     String[] cur = (String[]) FIFO_Buffer.poll();
-                    System.out.println("Deliver remaining message" + cur[2]);
-                }//TODO:add print
-
+                    System.out.println("Reveive Message " + cur[2] + "From Process "+ m.Sender_ID + "at time "+ Calendar.getInstance().getTime());
+                }
             }
         }
     }
