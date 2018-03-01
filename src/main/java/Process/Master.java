@@ -13,8 +13,19 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
 public class Master extends BlockingProcess {
+    /**
+     * A counter to keep track of the order of the sent process
+     */
     private int headercounter;
+
+    /**
+     * A queue to store all receiving messages.
+     */
     private BlockingQueue<Message> sequence;
+
+    /**
+     * A boolean flag to protect headercounter when sending, not necessary in this program.
+     */
     private boolean isSending;
 
     public Master(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
@@ -88,6 +99,14 @@ public class Master extends BlockingProcess {
         }
     }
 
+    /**
+     * This function handles connection (client side). If this is the first message, the new established
+     * Socket need to be added to global maps. Otherwise, it just pull out the record from the map.
+     *
+     * @param dst
+     * @return
+     * @throws IOException
+     */
     public Socket MhandleSendConnection(int dst) throws IOException {
         Socket s;
         if (idMapSocket.containsKey(dst)) {
@@ -112,6 +131,14 @@ public class Master extends BlockingProcess {
         return s;
     }
 
+    /**
+     * Handle master receive, once called, receives message from all processes, once received a message, put it in the
+     * queue and then update the header counter.
+     *
+     * @param dst
+     * @param msg
+     * @throws IOException
+     */
     public void master_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
         while (true) {
@@ -123,10 +150,8 @@ public class Master extends BlockingProcess {
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            //Message m = new Message(ipMapId.get(s.socket().getRemoteSocketAddress()), (InetSocketAddress) s.socket().getRemoteSocketAddress(), strmsg, headercounter);
             if(!isSending) {
                 this.headercounter++;
-                System.out.println("header modified, currently is " + this.headercounter);
                 m.header = this.headercounter;
                 sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header));
             }
@@ -134,14 +159,24 @@ public class Master extends BlockingProcess {
         }
     }
 
+    /**
+     * Send message to the corresponding process with ID
+     *
+     * @param dst
+     * @param m
+     * @throws IOException
+     */
     private void master_send(int dst, Message m) throws IOException {
         System.out.println("sending msg : " + m.msg + " to dst: " + dst);
         Socket s = MhandleSendConnection(dst);
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush.
-        oos.writeObject(new Message(selfID, idMapIp.get(dst), m.msg, m.header));//TODO: message
+        oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header));
     }
 
+    /**
+     * Reset the master node.
+     */
     public void reset_master() {
         this.headercounter = 0;
         this.sequence = new LinkedBlockingDeque<Message>();
