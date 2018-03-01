@@ -37,7 +37,7 @@ public class CausalOrderProcess extends BlockingProcess {
         clock = new VectorClock(new int[map.size()]);// initialize to (0,0,0,0...)
         clockPos = ID - 1;
         super.deliverQueue = new PriorityBlockingQueue<Packet>(100);
-        LOGGER.setLevel(Level.FINE);
+        LOGGER.setLevel(Level.INFO);
         LOGGER.info("Current vector clock:" + clock);
     }
 
@@ -61,10 +61,9 @@ public class CausalOrderProcess extends BlockingProcess {
                     LOGGER.info("Current vector clock: " + clock);
                 } else if (parsed[0].equals("msend")) {
                     LOGGER.finest("Casual multicast");
-                    String[] parseDelay = parsed[1].split("\\s*delay\\s*", 2);
+                    String[] parseDelay = parsed[1].split("\\s+delay\\s+", 2);
                     HashMap<Integer, Long> customizeDelay = null;
                     byte[] msgBytes;
-                    boolean random = true;
                     VectorClock copyClock;
                     synchronized (lock) {
                         clock.incAt(clockPos);
@@ -75,17 +74,16 @@ public class CausalOrderProcess extends BlockingProcess {
                         DelayParser delayParser = new DelayParser(parseDelay[1], idMapIp.size(), selfID);
                         customizeDelay = delayParser.parse();
                         msgBytes = parseDelay[0].getBytes();
-                        random = false;
                     } else {
                         msgBytes = parsed[1].getBytes();
                     }
                     causalSend(msgBytes, customizeDelay, copyClock);
                 } else {
-                    LOGGER.severe("not a legal command");
+                    throw new IllegalArgumentException();
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            } catch (NumberFormatException e) {
+            } catch (IllegalArgumentException e) {
                 LOGGER.severe("not a legal command");
             }
         }
@@ -93,9 +91,10 @@ public class CausalOrderProcess extends BlockingProcess {
 
     /**
      * This function handle causal multicast send
-     * @param msg message
+     *
+     * @param msg   message
      * @param delay Map from id to delay time
-     * @param c the copy of clock to attach to the packet
+     * @param c     the copy of clock to attach to the packet
      */
     protected void causalSend(byte[] msg, HashMap<Integer, Long> delay, VectorClock c) {
         for (Map.Entry<Integer, InetSocketAddress> entry :
@@ -109,28 +108,28 @@ public class CausalOrderProcess extends BlockingProcess {
                         e.printStackTrace();
                     }
                 }
-            }, delay == null ? (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay : (long) delay.get(entry.getKey()));
+            }, delay == null ? (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay : delay.get(entry.getKey()));
         }//Send to everyone with different
     }
 
     protected void unicast_send(int dst, byte[] msg, VectorClock c) throws IOException {
         LOGGER.finest("sending msg : " + new String(msg) + " to dst: " + dst);
         LOGGER.finest("sending Clock: " + c);
-        Socket s;
+        Packet p = new Packet(selfID, new String(msg), c);
         if (dst == selfID) {
-            LOGGER.info("Receive Msg: " + new String(msg));
+            LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: " + new Date());
+            LOGGER.info("Current VectorClock: " + clock);
             return;
         }
+        Socket s;
         s = handleSendConnection(dst);
         LOGGER.finest("The socket is connected?: " + s.isConnected());
-        int msg_len = msg.length;
-        LOGGER.finest("msg length: " + msg_len);
         LOGGER.finest("sending to: " + s.getRemoteSocketAddress());
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush?
         while (true) {
             try {
-                oos.writeObject(new Packet(selfID, new String(msg), c));//Add a clock to the end
+                oos.writeObject(p);//Add a clock to the end
                 break;
             } catch (Exception e) {
                 e.printStackTrace();

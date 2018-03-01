@@ -13,16 +13,9 @@ if [ $(uname) = "Darwin" ]; then
 else
     if [ -n "$2" ]; then
         echo "$2/$id"
-        gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id configuration $2/$id"
+        gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id CausalConfiguration $2/$id"
     else
-        gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id configuration"
+        gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id CausalConfiguration"
     fi
 fi
-#if (uname)
-#if [ -n "$2" ]; then
-#    echo "$2/$id"
-#    gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id configuration $2/$id"
-#else
-#    gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id configuration"
-#fi
 done

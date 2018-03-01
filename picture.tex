@@ -1,0 +1,51 @@
+
+cumentclass[12pt]{article}
+\usepackage{tikz}
+
+\begin{document}
+
+\begin{center}
+\begin{tikzpicture}[scale=0.2]
+\tikzstyle{every node}+=[inner sep=0pt]
+\draw [black] (46.9,-10.3) circle (3);
+\draw (46.9,-10.3) node {$Process$};
+\draw [black] (29.8,-26.1) circle (3);
+\draw (29.8,-26.1) node {$accept$};
+\draw [black] (46.3,-26.1) circle (3);
+\draw (46.3,-26.1) node {$send$};
+\draw [black] (67.8,-26.1) circle (3);
+\draw (67.8,-26.1) node {$deliver$};
+\draw [black] (34.7,-41) circle (3);
+\draw (34.7,-41) node {$listener$};
+\draw [black] (58.5,-47.2) circle (3);
+\draw (58.5,-47.2) node {$queue$};
+\draw [black] (25.4,-41) circle (3);
+\draw (25.4,-41) node {$.......$};
+\draw [black] (44.7,-12.34) -- (32,-24.06);
+\fill [black] (32,-24.06) -- (32.93,-23.89) -- (32.25,-23.15);
+\draw [black] (46.79,-13.3) -- (46.41,-23.1);
+\fill [black] (46.41,-23.1) -- (46.94,-22.32) -- (45.94,-22.28);
+\draw (46.04,-18.19) node [left] {$parsed\mbox{ }command$};
+\draw [black] (49.29,-12.11) -- (65.41,-24.29);
+\fill [black] (65.41,-24.29) -- (65.07,-23.41) -- (64.47,-24.21);
+\draw [black] (39.8,-6.3) -- (44.29,-8.83);
+\draw (39.14,-5.09) node [left] {$Get\mbox{ }input\mbox{ }from\mbox{ }stdin$};
+\fill [black] (44.29,-8.83) -- (43.83,-8) -- (43.34,-8.87);
+\draw [black] (24.2,-22.6) -- (27.26,-24.51);
+\draw (23.57,-21.31) node [left] {$New\mbox{ }connection...$};
+\fill [black] (27.26,-24.51) -- (26.84,-23.66) -- (26.31,-24.51);
+\draw [black] (30.74,-28.95) -- (33.76,-38.15);
+\fill [black] (33.76,-38.15) -- (33.99,-37.23) -- (33.04,-37.55);
+\draw (31.48,-34.24) node [left] {$Start\mbox{ }new\mbox{ }listener\mbox{ }for\mbox{ }each\mbox{ }connection$};
+\draw [black] (37.6,-41.76) -- (55.6,-46.44);
+\fill [black] (55.6,-46.44) -- (54.95,-45.76) -- (54.7,-46.73);
+\draw (43.01,-44.92) node [below] {$add\mbox{ }packet$};
+\draw [black] (66.59,-28.85) -- (59.71,-44.45);
+\fill [black] (59.71,-44.45) -- (60.49,-43.92) -- (59.58,-43.52);
+\draw (62.42,-35.67) node [left] {$get\mbox{ }packet\mbox{ }and\mbox{ }deliver$};
+\draw [black] (28.95,-28.98) -- (26.25,-38.12);
+\fill [black] (26.25,-38.12) -- (26.96,-37.5) -- (26,-37.21);
+\end{tikzpicture}
+\end{center}
+
+\end{document}

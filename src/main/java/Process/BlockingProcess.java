@@ -91,11 +91,9 @@ public class BlockingProcess implements Runnable {
                 final String msg = (String) writeQueue.take();
                 final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
                 System.out.println("delay is: " + delay);
-                String parsed[] = msg.split(" ", 3);
-                if (parsed.length != 3) {
-                    System.out.println("not a legal command");
-                    continue;
-                }
+                String parsed[] = msg.split("\\s+", 3);
+                if (parsed.length != 3)
+                    throw new IllegalArgumentException();
                 if (parsed[0].equals("send")) {
                     if (idMapIp.containsKey(Integer.parseInt(parsed[1]))) {
                         new Timer().schedule(new TimerTask() {
@@ -112,10 +110,12 @@ public class BlockingProcess implements Runnable {
                         LOGGER.warning("This PID is not exist");
                     }
                 } else {
-                    LOGGER.severe("not a legal command");
+                    throw new IllegalArgumentException();
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } catch (IllegalArgumentException e) {
+                LOGGER.severe("not a legal command");
             }
         }
     }
@@ -162,17 +162,18 @@ public class BlockingProcess implements Runnable {
     protected void unicast_send(int dst, byte[] msg) throws IOException {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         Socket s;
-        if (dst == selfID) {
-            System.out.println("You are sending message to yourself! Msg: " + new String(msg));
-            return;
-        }
         s = handleSendConnection(dst);
         int msg_len = msg.length;
         System.out.println("msg length: " + msg_len);
         System.out.println("sending to: " + s.getRemoteSocketAddress());
+        Packet p = new Packet(selfID, new String(msg));
+        if (dst == selfID) {
+            deliverQueue.add(p);
+            return;
+        }
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush?
-        oos.writeObject(new Packet(selfID, new String(msg)));
+        oos.writeObject(p);
     }
 
     /**

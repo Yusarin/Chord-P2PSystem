@@ -20,9 +20,10 @@ public class CausalMulticastDemo extends UnicastDemo {
             if (args.length > 2) {
                 System.out.println("reading script...");
                 ArrayList<String> lines = readScript(args[2]);
-                for (String line : lines) {
-                    q.add(line);
-                }
+                if (lines != null)
+                    for (String line : lines) {
+                        q.add(line);
+                    }
             }
             while (true) {
                 String msg = br.readLine();
