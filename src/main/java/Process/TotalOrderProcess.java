@@ -29,7 +29,6 @@ public class TotalOrderProcess extends BlockingProcess {
     @Override
     public void run() {
         System.out.println("A TotalOrderProcess is up");
-        //System.out.println("listening on " + sock);
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -115,22 +114,18 @@ public class TotalOrderProcess extends BlockingProcess {
 
 
     protected void multicast_send(int dst, byte[] msg) throws IOException {
-        //System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         Socket s;
         if (dst == selfID) {
             System.out.println("You are sending message to yourself! Msg: " + new String(msg));
             return;
         }
         s = MhandleSendConnection(dst);
-        int msg_len = msg.length;
-        //System.out.println("msg length: " + msg_len);
-        //System.out.println("sending to: " + s.getRemoteSocketAddress());
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush?
-        oos.writeObject(new Message(selfID, idMapIp.get(dst), new String(msg), 0));
+        oos.writeObject(new Message(selfID, addr, new String(msg), 0));
     }
 
-    private String multicast_receive(int dst, byte[] msg) throws IOException {
+    private void multicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
         while (true) {
             ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
@@ -151,8 +146,8 @@ public class TotalOrderProcess extends BlockingProcess {
                 this.sequence_cursor++;
                 for (String[] tmps = (String[]) FIFO_Buffer.peek(); tmps != null && Integer.parseInt(tmps[1]) <= this.sequence_cursor && !FIFO_Buffer.isEmpty(); this.sequence_cursor++) {
                     String[] cur = (String[]) FIFO_Buffer.poll();
-                    System.out.println("Received message " + strs[2] + "from process "+ m.Sender_ID + "at time "+ Calendar.getInstance().getTime());
-                }//TODO:add print
+                    System.out.println("Received message " + cur[2] + "from process "+ m.Sender_ID + "at time "+ Calendar.getInstance().getTime());
+                }
 
             }
         }
