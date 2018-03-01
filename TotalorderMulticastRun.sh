@@ -18,11 +18,5 @@ else
         gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.TotalMulticastDemo $id totalconfiguration"
     fi
 fi
-#if (uname)
-#if [ -n "$2" ]; then
-#    echo "$2/$id"
-#    gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.TotalMulticastDemo $id totalconfiguration $2/$id"
-#else
-#    gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.TotalMulticastDemo $id totalconfiguration"
-#fi
+
 done
