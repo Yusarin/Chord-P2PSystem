@@ -8,17 +8,20 @@ import java.net.*;
 import java.nio.*;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-public class Master extends BlockingProcess{
+public class Master extends BlockingProcess {
     private int headercounter;
     private BlockingQueue<Message> sequence;
+    private boolean isSending;
 
-    public Master(BlockingQueue q, int ID, HashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
-        super(q,ID,map,min_delay,max_delay);
-        headercounter = 0;
+    public Master(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
+        super(q, ID, map, min_delay, max_delay);
+        this.headercounter = 0;
         this.sequence = new LinkedBlockingDeque<Message>(100);
+        this.isSending = false;
     }
 
     @Override
@@ -30,10 +33,10 @@ public class Master extends BlockingProcess{
             public void run() {
                 while (true) {
                     try {
-                        SocketChannel s = sock.accept();
-                        System.out.println("accepting: " + s.socket().getRemoteSocketAddress() + " is connected? " + s.isConnected());
+                        Socket s = sock.accept();
+                        System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
                         if (!idMapSocket.containsValue(s)) {
-                            Integer newID = ipMapId.get(s.socket().getRemoteSocketAddress());
+                            Integer newID = ipMapId.get(s.getRemoteSocketAddress());
                             System.out.println("incoming id: " + newID);
                             assert newID != null;
                             idMapSocket.put(newID, s);
@@ -42,7 +45,7 @@ public class Master extends BlockingProcess{
                             @Override
                             public void run() {
                                 try {
-                                    unicast_receive(ipMapId.get(s.socket().getRemoteSocketAddress()), new byte[8]);
+                                    master_receive(ipMapId.get(s.getRemoteSocketAddress()), new byte[8]);
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -60,77 +63,86 @@ public class Master extends BlockingProcess{
                 while (!sequence.isEmpty()) {
                     Message current = sequence.poll(1, TimeUnit.DAYS);
 
-                    final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
-                    new Timer().schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            try {
-                                for (int i : idMapSocket.keySet()) {
-                                    multicast_send(i, current);
+                    isSending = true;
+                    for (int i : idMapIp.keySet()) {
+                        final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
+                        new Timer().schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (i != selfID)
+                                        master_send(i, current);
+
+                                } catch (IOException e) {
+                                    e.printStackTrace();
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
                             }
-                        }
-                    }, delay);
+                        }, delay);
+                    }
+                    isSending = false;
                 }
-            }
-            catch (InterruptedException e){
+            }catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
         }
     }
-    
 
-    public void unicast_receive(int dst, byte[] msg) throws IOException {
-        SocketChannel s = idMapSocket.get(dst);
+    public Socket MhandleSendConnection(int dst) throws IOException {
+        Socket s;
+        if (idMapSocket.containsKey(dst)) {
+            s = idMapSocket.get(dst);
+        } else {//this is first time connection
+            s = new Socket();
+            s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+            s.bind(addr);
+            InetSocketAddress id;
+            idMapSocket.put(dst, s);
+            id = idMapIp.get(dst);
+            System.out.println(id);
+            s.connect(id);
+            new Thread(() -> {
+                try {
+                    master_receive(ipMapId.get(s.getRemoteSocketAddress()), new byte[8]);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+        }
+        return s;
+    }
+
+    public void master_receive(int dst, byte[] msg) throws IOException {
+        Socket s = idMapSocket.get(dst);
         while (true) {
-            ByteBuffer sizeBuf = ByteBuffer.allocate(4);
-            s.read(sizeBuf);
-            int length = sizeBuf.flip().getInt();
-            System.out.println("receive " + length + " bytes");
-            ByteBuffer content = ByteBuffer.allocate(length);
-            s.read(content);
-            content.flip();
-            byte[] message = new byte[content.remaining()];
-            content.get(message);
-            String strmsg = new String(message);
-            Message m = new Message(ipMapId.get(s.socket().getRemoteSocketAddress()), (InetSocketAddress)s.socket().getRemoteSocketAddress(), strmsg, headercounter);
-            headercounter++;
-            sequence.offer(m);
+            Message m = null;
+            ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
+            try {
+                m = (Message) ois.readObject();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            String strmsg = m.Serial;
+            //Message m = new Message(ipMapId.get(s.socket().getRemoteSocketAddress()), (InetSocketAddress) s.socket().getRemoteSocketAddress(), strmsg, headercounter);
+            if(!isSending) {
+                this.headercounter++;
+                System.out.println("header modified, currently is " + this.headercounter);
+                m.header = this.headercounter;
+                sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header));
+            }
             System.out.println("Sequencer Received: " + strmsg);
         }
     }
 
-    private void multicast_send(int dst, Message m) throws IOException {
-
-        byte[] msg = m.Serial.getBytes();
-
-        System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
-
-        SocketChannel s;
-        if (dst == ID) {
-            System.out.println("You are sending message to yourself! Msg: " + new String(msg));
-            return;
-        }
-        if (idMapSocket.containsKey(dst)) {
-            s = idMapSocket.get(dst);
-        } else {//this is first time connection
-            s = SocketChannel.open();
-            s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
-            s.bind(addr);
-            s.connect(idMapIp.get(dst));
-            System.out.println(s.isConnected());
-            idMapSocket.put(dst, s);
-        }
-        int msg_len = msg.length;
-        System.out.println("msg length: " + msg_len);
-        s.write((ByteBuffer) ByteBuffer.allocate(4).putInt(msg_len).flip());
-        s.write(ByteBuffer.wrap(msg));
+    private void master_send(int dst, Message m) throws IOException {
+        System.out.println("sending msg : " + m.msg + " to dst: " + dst);
+        Socket s = MhandleSendConnection(dst);
+        ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
+        oos.flush();// TODO:Do we need flush.
+        oos.writeObject(new Message(selfID, idMapIp.get(dst), m.msg, m.header));//TODO: message
     }
 
-    public void reset_master(){
+    public void reset_master() {
         this.headercounter = 0;
         this.sequence = new LinkedBlockingDeque<Message>();
     }

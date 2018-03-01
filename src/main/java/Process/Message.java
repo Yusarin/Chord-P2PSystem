@@ -5,7 +5,7 @@ import java.util.*;
 import java.net.*;
 import java.nio.*;
 
-public class Message{
+public class Message implements Serializable{
     int Sender_ID;
     int header;
     InetSocketAddress Sender_addr;
