@@ -20,7 +20,7 @@ public class TotalOrderProcess extends BlockingProcess {
         FIFO_Buffer = new PriorityQueue<String[]>(10, new Comparator<String[]>() {
             @Override
             public int compare(String[] s1, String[] s2) {
-                return Integer.parseInt(s2[1]) - Integer.parseInt(s1[1]);
+                return Integer.parseInt(s1[1]) - Integer.parseInt(s2[1]);
             }
         });
         sequence_cursor = 1;
