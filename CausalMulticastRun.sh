@@ -6,9 +6,9 @@ echo $(uname)
 if [ $(uname) = "Darwin" ]; then
     if [ -n "$2" ]; then
         echo "$2/$id"
-        osascript -e "tell application \"Terminal\" to do script \"cd $PWD && java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id configuration $2/$id\""
+        osascript -e "tell application \"Terminal\" to do script \"cd $PWD && java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id CausalConfiguration $2/$id\""
     else
-        osascript -e "tell application \"Terminal\" to do script \"cd $PWD && java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id configuration\""
+        osascript -e "tell application \"Terminal\" to do script \"cd $PWD && java -cp build/libs/CS425MP1.jar Process.CausalMulticastDemo $id CausalConfiguration\""
     fi
 else
     if [ -n "$2" ]; then
