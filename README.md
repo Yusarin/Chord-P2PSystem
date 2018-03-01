@@ -59,8 +59,13 @@ java -cp build/libs/CS425MP1.jar Process.UnicastDemo <id> UnicastConfiguration
 ./UnicastRun.sh 4 #(the number of process, has to be consistent to configuration file)
 ```
 ```bash
+./TotalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
+file) [script directory name] #(read startup command from ./TotalMulticastScript directory)
+```
+
+```bash
 ./CausalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
-file) [script directory name] #(read startup command from ./script directory)
+file) [script directory name] #(read startup command from ./CausalMulticastScript directory)
 ```
 
 ## Available command
@@ -68,6 +73,14 @@ file) [script directory name] #(read startup command from ./script directory)
 ### Unicast
 ```
 send <id: int> <message>
+```
+
+### Total multicast
+```
+msend <message> [delay]
+(The delay parameter is optional, if you want to customize the delay you can add
+the delay, otherwise there will be a randomized delay within the range specified
+in the configuration file) 
 ```
 
 ### Causal multicast
@@ -87,4 +100,4 @@ Just press Ctrl+C
 
 ## Script format
 
-Same as available command (script is only available for causal multicast)
+Same as available command

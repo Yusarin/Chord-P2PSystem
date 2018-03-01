@@ -59,6 +59,7 @@ public class TotalOrderProcess extends BlockingProcess {
                             @Override
                             public void run() {
                                 try {
+
                                     multicast_receive(ipMapId.get(s.getRemoteSocketAddress()), new byte[8]);
                                 } catch (IOException e) {
                                     e.printStackTrace();
@@ -75,17 +76,19 @@ public class TotalOrderProcess extends BlockingProcess {
             try {
                 final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
                 final String msg = (String) writeQueue.poll(1, TimeUnit.DAYS);
+                String parsed[] = msg.split(" ", 3);
+                final long customdelay = parsed.length == 3 ? -1 : Integer.parseInt(parsed[2]);
+                final long realdelay = customdelay == -1 ? delay : customdelay;
                 new Timer().schedule(new TimerTask() {
                     @Override
                     public void run() {
                         try {
                             //Send message to Master.
-                            System.out.println("delay is :" + delay);
-                            String parsed[] = msg.split(" ", 2);
-                            if (parsed.length != 2) {
+                            if (parsed.length < 2 || parsed.length > 3) {
                                 System.out.println("not a legal command");
                                 return;
                             }
+                                System.out.println("delay is :" + realdelay);
                             if (parsed[0].equals("msend")) {
                                 multicast_send(0, parsed[1].getBytes());
                             } else {
@@ -95,7 +98,7 @@ public class TotalOrderProcess extends BlockingProcess {
                             e.printStackTrace();
                         }
                     }
-                }, delay);
+                }, realdelay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
