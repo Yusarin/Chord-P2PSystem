@@ -90,7 +90,7 @@ public class TotalOrderProcess extends BlockingProcess {
                             }
                                 System.out.println("delay is :" + realdelay);
                             if (parsed[0].equals("msend")) {
-                                multicast_send(0, parsed[1].getBytes());
+                                multicast_send(0, parsed[1].getBytes(), customdelay);
                             } else {
                                 System.out.println("not a legal command");
                             }
@@ -98,7 +98,7 @@ public class TotalOrderProcess extends BlockingProcess {
                             e.printStackTrace();
                         }
                     }
-                }, realdelay);
+                }, delay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -144,7 +144,7 @@ public class TotalOrderProcess extends BlockingProcess {
      * @param msg
      * @throws IOException
      */
-    protected void multicast_send(int dst, byte[] msg) throws IOException {
+    protected void multicast_send(int dst, byte[] msg, long customDelay) throws IOException {
         Socket s;
         if (dst == selfID) {
             System.out.println("You are sending message to yourself! Msg: " + new String(msg));
@@ -153,7 +153,7 @@ public class TotalOrderProcess extends BlockingProcess {
         s = MhandleSendConnection(dst);
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();
-        oos.writeObject(new Message(selfID, addr, new String(msg), 0));
+        oos.writeObject(new Message(selfID, addr, new String(msg), 0, customDelay));
     }
 
     /**
@@ -183,13 +183,12 @@ public class TotalOrderProcess extends BlockingProcess {
                 System.out.println("Buffering message");
                 FIFO_Buffer.offer(strs);
             } else {
-                System.out.println("Received message " + strs[2] + "from process "+ m.Sender_ID + "at time "+ Calendar.getInstance().getTime());
+                System.out.println("Received message " + strs[2] + " from process"+ m.Sender_ID + " at time "+ Calendar.getInstance().getTime());
                 this.sequence_cursor++;
                 for (String[] tmps = (String[]) FIFO_Buffer.peek(); tmps != null && Integer.parseInt(tmps[1]) <= this.sequence_cursor && !FIFO_Buffer.isEmpty(); this.sequence_cursor++) {
                     String[] cur = (String[]) FIFO_Buffer.poll();
-                    System.out.println("Received message " + cur[2] + "from process "+ m.Sender_ID + "at time "+ Calendar.getInstance().getTime());
+                    System.out.println("Received message " + cur[2] + " from process"+ Integer.parseInt(cur[0]) + " at time "+ Calendar.getInstance().getTime());
                 }
-
             }
         }
     }

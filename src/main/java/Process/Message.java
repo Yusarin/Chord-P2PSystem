@@ -1,18 +1,17 @@
 package Process;
 
-import java.io.*;
-import java.util.*;
-import java.net.*;
-import java.nio.*;
+import java.io.Serializable;
+import java.net.InetSocketAddress;
 
 public class Message implements Serializable{
     int Sender_ID;
     int header;
     InetSocketAddress Sender_addr;
+    long customDelay;
     String msg;
     String Serial;
 
-    public Message(int ID, InetSocketAddress addr, String msg, int header){
+    public Message(int ID, InetSocketAddress addr, String msg, int header, long customDelay){
         this.Sender_ID = ID;
         this.Sender_addr = addr;
         this.header = header;

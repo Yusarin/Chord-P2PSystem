@@ -83,12 +83,11 @@ public class Master extends BlockingProcess {
                                 try {
                                     if (i != selfID)
                                         master_send(i, current);
-
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
                             }
-                        }, delay);
+                        }, current.customDelay == -1 ? delay : current.customDelay);
                     }
                     isSending = false;
                 }
@@ -153,7 +152,7 @@ public class Master extends BlockingProcess {
             if(!isSending) {
                 this.headercounter++;
                 m.header = this.headercounter;
-                sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header));
+                sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header, m.customDelay));
             }
             System.out.println("Sequencer Received: " + strmsg);
         }
@@ -171,7 +170,7 @@ public class Master extends BlockingProcess {
         Socket s = MhandleSendConnection(dst);
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush.
-        oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header));
+        oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header, m.customDelay));
     }
 
     /**
