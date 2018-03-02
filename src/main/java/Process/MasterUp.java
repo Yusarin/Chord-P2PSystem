@@ -13,7 +13,7 @@ public class MasterUp extends UnicastDemo {
         Config config = UnicastDemo.parseConfig(args[1]);
         //if(id == 1)
         //    new Thread(new Master(q, 0, config.m, config.minDelay, config.maxDelay)).start();
-        new Thread(new Master(q, 0, config.m, config.minDelay, config.maxDelay)).start();
+        new Thread(new Master(q, 0, config.m, 100, 1000)).start();
         System.out.println(config.m);
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         while (true) {

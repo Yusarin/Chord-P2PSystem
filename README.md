@@ -15,6 +15,21 @@ and one thread for receiving message from its peers.
 
 - Each process maintain an internal vector clock
 
+## Algorithms and implementation
+###Total Order Multicast:
+For the total order multicast, we used a sequencer to receive all the message from each process.
+First we use MasterUp to launch the sequencer and let it start listening on other processes. Then
+four other processes up. 
+When a process get a msend command, it starts total order multicast in the
+following procedure : First the process send a message to the sequencer, and then put in the queue of
+the sequencer, when the queue polls out this message, the sequencer gives the message a header indicating
+how many messages have been sent by the sequencer including this one. Then the message was sent to every 
+process. In each process, there is a cursor indicating message with which header should be delivered next,
+if the incoming message's header is greater than the cursor in this process, we put it in a priorityqueue 
+for buffer, otherwise we deliver it directly and update the cursor. Once we update the cursor, we check if
+there are some messages in the priority queue that can be delivered, if so we poll from the queue and 
+deliver message. This procedure ensures the same deliver order in every process. 
+
 ## Requirement
 - MacOs or Linux (gnome desktop preferred)
 
