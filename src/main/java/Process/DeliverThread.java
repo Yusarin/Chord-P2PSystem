@@ -1,10 +1,16 @@
 package Process;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.logging.Logger;
+
+import javax.swing.LookAndFeel;
 
 public class DeliverThread implements Runnable {
     private BlockingQueue queue;
@@ -12,6 +18,7 @@ public class DeliverThread implements Runnable {
     private final Lock lock;
     private final Condition condition;
     private final Logger LOGGER;
+    private final ArrayList<Packet> packetSet = new ArrayList<>();
 
     /**
      * For unicast
@@ -65,20 +72,30 @@ public class DeliverThread implements Runnable {
             try {
                 if (clock == null) { // if clock is null, then it is unicast
                     Packet p = (Packet) queue.take();
-                    LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: " + new Date());
+                    LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId()
+                            + " at system time: " + new Date());
                 } else {
-                    Packet p;
-                    lock.lock();// shared memory
-                    while (queue.peek() == null || !clock.asExpected(((Packet) queue.peek()).getClock())) {
-                        if (queue.peek() != null)
-                            LOGGER.fine("top packet clock: " + ((Packet) queue.peek()).getClock());
-                        condition.await();//block deliver thread if no expected packet arrives.
+                    Packet incoming = (Packet) queue.take();
+                    packetSet.add(incoming);
+                    while (true) {
+                        boolean foundExpected = false;
+                        for (int i = 0; i < packetSet.size(); ++i) {//iterate all the buffered packet
+                            Packet packet = packetSet.get(i);
+                            if (clock.asExpected(packet.getClock())) {
+                                LOGGER.info("Received message: (" + packet.getMsg() + ") from process: "
+                                        + packet.getSenderId() + " at system time: " + new Date());
+                                packetSet.remove(i);
+                                foundExpected = true;
+                                lock.lock();// shared memory
+                                updateClock(packet.getClock());
+                                LOGGER.info("Current VectorClock: " + clock);
+                                lock.unlock();
+                                break;
+                            }
+                        }
+                        if (!foundExpected)
+                            break;
                     }
-                    p = (Packet) queue.take();
-                    updateClock(p.getClock());
-                    lock.unlock();
-                    LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: " + new Date());
-                    LOGGER.info("Current VectorClock: " + clock);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();

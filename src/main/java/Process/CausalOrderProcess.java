@@ -30,7 +30,9 @@ public class CausalOrderProcess extends BlockingProcess {
      */
     private final Condition condition = lock.newCondition();
 
-    public CausalOrderProcess(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
+
+    public CausalOrderProcess(BlockingQueue<String> q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map,
+                              int min_delay, int max_delay) throws IOException {
         super(q, ID, map, min_delay, max_delay);
         clock = new VectorClock(new int[map.size()]);// initialize to (0,0,0,0...)
         clockPos = ID - 1;
@@ -95,8 +97,7 @@ public class CausalOrderProcess extends BlockingProcess {
      * @param c     the copy of clock to attach to the packet
      */
     protected void causalSend(byte[] msg, HashMap<Integer, Long> delay, VectorClock c) {
-        for (Map.Entry<Integer, InetSocketAddress> entry :
-                idMapIp.entrySet()) {
+        for (Map.Entry<Integer, InetSocketAddress> entry : idMapIp.entrySet()) {
             new Timer().schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -106,8 +107,9 @@ public class CausalOrderProcess extends BlockingProcess {
                         e.printStackTrace();
                     }
                 }
-            }, delay == null ? (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay : delay.get(entry.getKey()));
-        }//Send to everyone with different
+            }, delay == null ? (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay
+                    : delay.get(entry.getKey()));
+        } //Send to everyone with different
     }
 
     protected void unicast_send(int dst, byte[] msg, VectorClock c) throws IOException {
@@ -115,7 +117,8 @@ public class CausalOrderProcess extends BlockingProcess {
         LOGGER.finest("sending Clock: " + c);
         Packet p = new Packet(selfID, new String(msg), c);
         if (dst == selfID) {
-            LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: " + new Date());
+            LOGGER.info("Received message: (" + p.getMsg() + ") from process: " + p.getSenderId() + " at system time: "
+                    + new Date());
             LOGGER.info("Current VectorClock: " + clock);
             return;
         }
@@ -157,9 +160,6 @@ public class CausalOrderProcess extends BlockingProcess {
                 e.printStackTrace();
             }
             deliverQueue.add(p);
-            lock.lock();
-            condition.signal();
-            lock.unlock();
         }
     }
 }

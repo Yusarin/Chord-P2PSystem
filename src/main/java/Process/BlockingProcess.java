@@ -25,7 +25,9 @@ public class BlockingProcess implements Runnable {
     protected final int max_delay;
     protected static final Logger LOGGER = Logger.getLogger(CausalOrderProcess.class.getName());
 
-    public BlockingProcess(BlockingQueue q, int selfID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
+
+    public BlockingProcess(BlockingQueue q, int selfID, ConcurrentHashMap<Integer, InetSocketAddress> map,
+                           int min_delay, int max_delay) throws IOException {
         this.addr = map.get(selfID);
         sock = new ServerSocket();
         sock.setOption(StandardSocketOptions.SO_REUSEADDR, true);
@@ -150,7 +152,6 @@ public class BlockingProcess implements Runnable {
         }
         return s;
     }
-
 
     /**
      * Handle unicast send. There is not much to say here.

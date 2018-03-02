@@ -1,8 +1,8 @@
 package Process;
 
-
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.HashSet;
 import java.util.PriorityQueue;
 
 public class VectorClock implements Comparable, Serializable {
@@ -96,13 +96,13 @@ public class VectorClock implements Comparable, Serializable {
      * Simple test for VectorClock
      */
     public static void main(String[] args) {
-        VectorClock c1 = new VectorClock(new int[]{1, 1, 1});
-        VectorClock c2 = new VectorClock(new int[]{1, 1, 1});
-        VectorClock c3 = new VectorClock(new int[]{1, 2, 1});
-        VectorClock c4 = new VectorClock(new int[]{1, 2, 2});
-        VectorClock c5 = new VectorClock(new int[]{1, 3, 0});
-        VectorClock c6 = new VectorClock(new int[]{1, 3, 1});
-        VectorClock c7 = new VectorClock(new int[]{0, 10, 0});
+        VectorClock c1 = new VectorClock(new int[] { 1, 1, 1 });
+        VectorClock c2 = new VectorClock(new int[] { 1, 1, 1 });
+        VectorClock c3 = new VectorClock(new int[] { 1, 2, 1 });
+        VectorClock c4 = new VectorClock(new int[] { 1, 2, 2 });
+        VectorClock c5 = new VectorClock(new int[] { 1, 3, 0 });
+        VectorClock c6 = new VectorClock(new int[] { 1, 3, 1 });
+        VectorClock c7 = new VectorClock(new int[] { 0, 10, 0 });
         assert c1.compareTo(c2) == 0;
         assert c2.compareTo(c3) < 0;
         assert c3.compareTo(c2) > 0;
@@ -122,8 +122,7 @@ public class VectorClock implements Comparable, Serializable {
         p.add(c5);
         p.add(c6);
         p.add(c7);
-        for (VectorClock c :
-                p) {
+        for (VectorClock c : p) {
             System.out.println(c);
         }
     }

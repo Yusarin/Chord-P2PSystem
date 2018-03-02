@@ -5,7 +5,6 @@ if [ $(uname) = "Darwin" ]; then
 else
     gnome-terminal --tab -x zsh -c "java -cp build/libs/CS425MP1.jar Process.MasterUp 0 TotalConfiguration"
 fi
-sleep 3
 for id in $(seq 1 $1)
 do
 echo "$id"
