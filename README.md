@@ -77,6 +77,7 @@ deliver message. This procedure ensures the same deliver order in every process.
 
 ### Casual Order Multicast:
 Each process maintains a vector clock. Sending packet and delivering packet leads to update of vector clock.
+
 - Send a packet from process `i` result in `process.clock[i]++`
 
 - Deliver a packet if and only if there exists a packet in buffer that 
