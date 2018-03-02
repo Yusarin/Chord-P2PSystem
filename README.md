@@ -9,26 +9,13 @@ Group: _Chuchao Luo(chuchao2), Wenhan Zhao(wenhanz3)_
 - Each process is a java process
 
 - Each process has one thread to handle user Input, one thread to send message,
-and one thread for receiving message from its peers.
+ one thread for deliver packet and one thread for each peer to retrieve packets.
 
 - There is a master node to handle total order multicast.
 
-- Each process maintain an internal vector clock
+- Each process maintains an internal vector clock
 
-## Algorithms and implementation
-###Total Order Multicast:
-For the total order multicast, we used a sequencer to receive all the message from each process.
-First we use MasterUp to launch the sequencer and let it start listening on other processes. Then
-four other processes up. 
-When a process get a msend command, it starts total order multicast in the
-following procedure : First the process send a message to the sequencer, and then put in the queue of
-the sequencer, when the queue polls out this message, the sequencer gives the message a header indicating
-how many messages have been sent by the sequencer including this one. Then the message was sent to every 
-process. In each process, there is a cursor indicating message with which header should be delivered next,
-if the incoming message's header is greater than the cursor in this process, we put it in a priorityqueue 
-for buffer, otherwise we deliver it directly and update the cursor. Once we update the cursor, we check if
-there are some messages in the priority queue that can be delivered, if so we poll from the queue and 
-deliver message. This procedure ensures the same deliver order in every process. 
+
 
 ## Requirement
 - MacOs or Linux (gnome desktop preferred)
@@ -58,6 +45,45 @@ deliver message. This procedure ensures the same deliver order in every process.
 
 ## Overview of a process
 ![](./screen_shot.png)
+When a process start up, the foreground thread will start 3 background threads,
+- send thread: get user input as 
+
+- deliver thread: Pull the packet from `deliverQueue` and check if the packet is
+OK to deliver. If so, this thread print the message. Otherwise it buffers the 
+packet for later delivery.
+
+- accept thread: keep listening on port assigned to this process. If a new
+connection coming in, this thread makes a socket, wraps it as `ObjectOutputStream`
+and put it in a map: `processID -> ObjectOutputStream`. It also starts a listener thread 
+for each incoming connection.
+
+- listener thread: keep reading packet from `ObjectInputStream`. Once it receives
+a packet, it push the packet in `deliverQueue`.
+
+## Algorithms and implementation
+###Total Order Multicast:
+For the total order multicast, we used a sequencer to receive all the message from each process.
+First we use MasterUp to launch the sequencer and let it start listening on other processes. Then
+four other processes up. 
+When a process get a msend command, it starts total order multicast in the
+following procedure : First the process send a message to the sequencer, and then put in the queue of
+the sequencer, when the queue polls out this message, the sequencer gives the message a header indicating
+how many messages have been sent by the sequencer including this one. Then the message was sent to every 
+process. In each process, there is a cursor indicating message with which header should be delivered next,
+if the incoming message's header is greater than the cursor in this process, we put it in a priorityqueue 
+for buffer, otherwise we deliver it directly and update the cursor. Once we update the cursor, we check if
+there are some messages in the priority queue that can be delivered, if so we poll from the queue and 
+deliver message. This procedure ensures the same deliver order in every process. 
+
+### Casual Order Multicast:
+Each process maintains a vector clock. Sending packet and delivering packet leads to update of vector clock.
+- Send a packet from process `i` result in `process.clock[i]++`
+
+- Deliver a packet if and only if there exists a packet in buffer that 
+`packet.clock[i] == process.clock[i]+1 && packet.clock[k] <= process.clock[k]
+where k!=i and i < total process number`. After the delivery, update the process clock 
+by `process.clock[i] = packet.clock[i]`.
+
 
 ## Build
 ```bash
