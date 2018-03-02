@@ -1,1 +1,3 @@
-msend message_from_p4 1000
+msend msg10
+msend msg12
+msend msg11

@@ -1,1 +1,3 @@
-msend message_from_p3 2000
+msend msg8
+msend msg9
+msend msg7

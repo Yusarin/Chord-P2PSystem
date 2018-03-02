@@ -74,9 +74,9 @@ public class Master extends BlockingProcess {
                 while (!sequence.isEmpty()) {
                     Message current = sequence.poll(1, TimeUnit.DAYS);
 
-                    isSending = true;
                     for (int i : idMapIp.keySet()) {
                         final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
+                        //System.out.println("customdelay equals " + current.customDelay);
                         new Timer().schedule(new TimerTask() {
                             @Override
                             public void run() {
@@ -89,7 +89,6 @@ public class Master extends BlockingProcess {
                             }
                         }, current.customDelay == -1 ? delay : current.customDelay);
                     }
-                    isSending = false;
                 }
             }catch (InterruptedException e) {
                 e.printStackTrace();
@@ -149,11 +148,10 @@ public class Master extends BlockingProcess {
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            if(!isSending) {
                 this.headercounter++;
                 m.header = this.headercounter;
                 sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header, m.customDelay));
-            }
+
             System.out.println("Sequencer Received: " + strmsg);
         }
     }

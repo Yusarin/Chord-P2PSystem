@@ -17,5 +17,6 @@ public class Message implements Serializable{
         this.header = header;
         this.msg = msg;
         this.Serial = this.Sender_ID + "," + this.header +","+ msg;
+        this.customDelay = customDelay;
     }
 }

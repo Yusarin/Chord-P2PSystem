@@ -72,6 +72,12 @@ public class TotalOrderProcess extends BlockingProcess {
                 }
             }
         }).start();
+        System.out.println("Sleep for 3000ms");
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         while (true) {
             try {
                 final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
@@ -79,6 +85,7 @@ public class TotalOrderProcess extends BlockingProcess {
                 String parsed[] = msg.split(" ", 3);
                 final long customdelay = parsed.length == 3 ? Integer.parseInt(parsed[2]) : -1;
                 final long realdelay = customdelay == -1 ? delay : customdelay;
+
                 new Timer().schedule(new TimerTask() {
                     @Override
                     public void run() {
@@ -89,6 +96,7 @@ public class TotalOrderProcess extends BlockingProcess {
                                 return;
                             }
                                 System.out.println("delay is :" + realdelay);
+
                             if (parsed[0].equals("msend")) {
                                 multicast_send(0, parsed[1].getBytes(), customdelay);
                             } else {
@@ -181,15 +189,34 @@ public class TotalOrderProcess extends BlockingProcess {
             String[] strs = str.split(",");
             if (Integer.parseInt(strs[1]) > this.sequence_cursor) {
                 System.out.println("Buffering message");
+                System.out.println("Current cursor is" + sequence_cursor);
                 FIFO_Buffer.offer(strs);
             } else {
                 System.out.println("Received message " + strs[2] + " from process"+ m.Sender_ID + " at time "+ Calendar.getInstance().getTime());
+                System.out.println("Current cursor is" + sequence_cursor);
                 this.sequence_cursor++;
-                for (String[] tmps = (String[]) FIFO_Buffer.peek(); tmps != null && Integer.parseInt(tmps[1]) <= this.sequence_cursor && !FIFO_Buffer.isEmpty(); this.sequence_cursor++) {
+                /*for (String[] tmps = (String[]) FIFO_Buffer.peek(); tmps != null && getHeader((String[])FIFO_Buffer.peek()) <= this.sequence_cursor && !FIFO_Buffer.isEmpty(); this.sequence_cursor++) {
                     String[] cur = (String[]) FIFO_Buffer.poll();
                     System.out.println("Received message " + cur[2] + " from process"+ Integer.parseInt(cur[0]) + " at time "+ Calendar.getInstance().getTime());
+                    System.out.println("Current cursor is" + sequence_cursor);
+                    for(int i = 0 ; i < cur.length ; i++){
+                        tmps[i] = cur[i];
+                    }
+                }*/
+
+                while(getHeader((String[])FIFO_Buffer.peek()) <= this.sequence_cursor){
+                    String[] cur = (String[]) FIFO_Buffer.poll();
+                    System.out.println("Received message " + cur[2] + " from process"+ Integer.parseInt(cur[0]) + " at time "+ Calendar.getInstance().getTime());
+                    System.out.println("Current cursor is" + sequence_cursor);
+                    this.sequence_cursor++;
                 }
             }
         }
+    }
+
+    public int getHeader(String[] strs){
+        if(strs == null) return Integer.MAX_VALUE;
+
+        return Integer.parseInt(strs[1]);
     }
 }
