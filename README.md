@@ -1,5 +1,6 @@
 # CS425 MP1
 In this project, unicast, causal order multicast and total order multicast process.
+(check README.md for better format)
 
 ## Basic schema
 - Each process is a java process
@@ -63,19 +64,22 @@ java -cp build/libs/CS425MP1.jar Process.UnicastDemo <id> UnicastConfiguration [
 
 - Startup 4 Unicast processes
 ```bash
-./UnicastRun.sh 4 #(the number of process, has to be consistent to configuration file)
+./UnicastRun.sh 4 
+#the number of process, has to be consistent to configuration file
 ```
 
 - Startup 4 Total order multicast processes
 ```bash
-./TotalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
-file) [script directory name] #(read startup command from ./TotalMulticastScript directory)
+./TotalMulticastRun.sh 4 [script directory name] 
+#the number of process, has to be consistent to configuration file
+#read startup command from script directory
 ```
 
 - Startup 4 Causal order multicast processes
 ```bash
-./CausalMulticastRun.sh 4 (the number of process, has to be consistent to configuration 
-file) [script directory name] #(read startup command from ./CausalMulticastScript directory)
+./CausalMulticastRun.sh 4 [script directory name] 
+#the number of process, has to be consistent to configuration file
+#read startup command from script directory
 ```
 
 ## Available command

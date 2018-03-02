@@ -30,9 +30,10 @@ public class CausalOrderProcess extends BlockingProcess {
      */
     private final Condition condition = lock.newCondition();
 
+    private final Lock writeLock = new ReentrantLock();
 
     public CausalOrderProcess(BlockingQueue<String> q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map,
-                              int min_delay, int max_delay) throws IOException {
+            int min_delay, int max_delay) throws IOException {
         super(q, ID, map, min_delay, max_delay);
         clock = new VectorClock(new int[map.size()]);// initialize to (0,0,0,0...)
         clockPos = ID - 1;
@@ -127,14 +128,17 @@ public class CausalOrderProcess extends BlockingProcess {
         LOGGER.finest("The socket is connected?: " + s.isConnected());
         LOGGER.finest("sending to: " + s.getRemoteSocketAddress());
         ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
-        oos.flush();// TODO:Do we need flush?
         while (true) {
             try {
-                oos.writeObject(p);//Add a clock to the end
+                writeLock.lock();
+                oos.writeObject(p);
+                oos.flush();// TODO:Do we need flush?
                 break;
             } catch (Exception e) {
                 e.printStackTrace();
                 continue;// if network is bad, keep sending until the packet sent successfully.
+            } finally {
+                writeLock.unlock();
             }
         }
     }
