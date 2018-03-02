@@ -61,7 +61,7 @@ for each incoming connection.
 a packet, it push the packet in `deliverQueue`.
 
 ## Algorithms and implementation
-###Total Order Multicast:
+### Total Order Multicast:
 For the total order multicast, we used a sequencer to receive all the message from each process.
 First we use MasterUp to launch the sequencer and let it start listening on other processes. Then
 four other processes up. 
