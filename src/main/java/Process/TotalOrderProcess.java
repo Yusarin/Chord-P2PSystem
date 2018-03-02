@@ -1,11 +1,8 @@
 package Process;
 
 import java.io.*;
-import java.nio.channels.ServerSocketChannel;
 import java.util.*;
 import java.net.*;
-import java.nio.*;
-import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -49,11 +46,12 @@ public class TotalOrderProcess extends BlockingProcess {
                     try {
                         Socket s = sock.accept();
                         System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
-                        if (!idMapSocket.containsValue(s)) {
+                        if (!idMapOOS.containsValue(s)) {
                             Integer newID = ipMapId.get(s.getRemoteSocketAddress());
                             System.out.println("incoming id: " + newID);
                             assert newID != null;
                             idMapSocket.put(newID, s);
+                            idMapOOS.put(newID, new ObjectOutputStream(s.getOutputStream()));
                         }
                         new Thread(new Runnable() {
                             @Override
@@ -95,7 +93,7 @@ public class TotalOrderProcess extends BlockingProcess {
                                 System.out.println("not a legal command");
                                 return;
                             }
-                                System.out.println("delay is :" + realdelay);
+                            System.out.println("delay is :" + realdelay);
 
                             if (parsed[0].equals("msend")) {
                                 multicast_send(0, parsed[1].getBytes(), customdelay);
@@ -121,18 +119,21 @@ public class TotalOrderProcess extends BlockingProcess {
      * @return
      * @throws IOException
      */
-    public Socket MhandleSendConnection(int dst) throws IOException {
+    public ObjectOutputStream MhandleSendConnection(int dst) throws IOException {
         Socket s;
-        if (idMapSocket.containsKey(dst)) {
-            s = idMapSocket.get(dst);
+        ObjectOutputStream oos = null;
+        if (idMapOOS.containsKey(dst)) {
+            oos = idMapOOS.get(dst);
         } else {//this is first time connection
             s = new Socket();
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
-            InetSocketAddress id;
+            InetSocketAddress ip;
+            ip = idMapIp.get(dst);
+            s.connect(ip);
+            oos = new ObjectOutputStream(s.getOutputStream());
+            idMapOOS.put(dst, oos);
             idMapSocket.put(dst, s);
-            id = idMapIp.get(dst);
-            s.connect(id);
             new Thread(() -> {
                 try {
                     multicast_receive(ipMapId.get(s.getRemoteSocketAddress()), new byte[8]);
@@ -141,7 +142,7 @@ public class TotalOrderProcess extends BlockingProcess {
                 }
             }).start();
         }
-        return s;
+        return oos;
     }
 
 
@@ -153,13 +154,12 @@ public class TotalOrderProcess extends BlockingProcess {
      * @throws IOException
      */
     protected void multicast_send(int dst, byte[] msg, long customDelay) throws IOException {
-        Socket s;
+        ObjectOutputStream oos;
         if (dst == selfID) {
             System.out.println("You are sending message to yourself! Msg: " + new String(msg));
             return;
         }
-        s = MhandleSendConnection(dst);
-        ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
+        oos = MhandleSendConnection(dst);
         oos.flush();
         oos.writeObject(new Message(selfID, addr, new String(msg), 0, customDelay));
     }
@@ -176,8 +176,8 @@ public class TotalOrderProcess extends BlockingProcess {
      */
     private void multicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
+        ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
-            ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
             Message m = null;
             try {
                 m = (Message) ois.readObject();
@@ -192,21 +192,12 @@ public class TotalOrderProcess extends BlockingProcess {
                 System.out.println("Current cursor is" + sequence_cursor);
                 FIFO_Buffer.offer(strs);
             } else {
-                System.out.println("Received message " + strs[2] + " from process"+ m.Sender_ID + " at time "+ Calendar.getInstance().getTime());
+                System.out.println("Received message " + strs[2] + " from process" + m.Sender_ID + " at time " + Calendar.getInstance().getTime());
                 System.out.println("Current cursor is" + sequence_cursor);
                 this.sequence_cursor++;
-                /*for (String[] tmps = (String[]) FIFO_Buffer.peek(); tmps != null && getHeader((String[])FIFO_Buffer.peek()) <= this.sequence_cursor && !FIFO_Buffer.isEmpty(); this.sequence_cursor++) {
+                while (getHeader((String[]) FIFO_Buffer.peek()) <= this.sequence_cursor) {
                     String[] cur = (String[]) FIFO_Buffer.poll();
-                    System.out.println("Received message " + cur[2] + " from process"+ Integer.parseInt(cur[0]) + " at time "+ Calendar.getInstance().getTime());
-                    System.out.println("Current cursor is" + sequence_cursor);
-                    for(int i = 0 ; i < cur.length ; i++){
-                        tmps[i] = cur[i];
-                    }
-                }*/
-
-                while(getHeader((String[])FIFO_Buffer.peek()) <= this.sequence_cursor){
-                    String[] cur = (String[]) FIFO_Buffer.poll();
-                    System.out.println("Received message " + cur[2] + " from process"+ Integer.parseInt(cur[0]) + " at time "+ Calendar.getInstance().getTime());
+                    System.out.println("Received message " + cur[2] + " from process" + Integer.parseInt(cur[0]) + " at time " + Calendar.getInstance().getTime());
                     System.out.println("Current cursor is" + sequence_cursor);
                     this.sequence_cursor++;
                 }
@@ -214,8 +205,8 @@ public class TotalOrderProcess extends BlockingProcess {
         }
     }
 
-    public int getHeader(String[] strs){
-        if(strs == null) return Integer.MAX_VALUE;
+    public int getHeader(String[] strs) {
+        if (strs == null) return Integer.MAX_VALUE;
 
         return Integer.parseInt(strs[1]);
     }

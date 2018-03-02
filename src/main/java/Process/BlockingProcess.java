@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 public class BlockingProcess implements Runnable {
     protected final BlockingQueue writeQueue;
+    protected final Map<Integer, ObjectOutputStream> idMapOOS = new ConcurrentHashMap<>();//map id to socket
     protected final Map<Integer, Socket> idMapSocket = new ConcurrentHashMap<>();//map id to socket
     protected final Map<InetSocketAddress, Integer> ipMapId;//map ip to id
     protected final Map<Integer, InetSocketAddress> idMapIp;//map id to ip
@@ -53,10 +54,11 @@ public class BlockingProcess implements Runnable {
                     Socket s = sock.accept();
                     Integer newID;
                     LOGGER.finest("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
-                    if (!idMapSocket.containsValue(s)) {
+                    if (!idMapOOS.containsValue(s)) {
                         newID = ipMapId.get(s.getRemoteSocketAddress());
                         System.out.println("incoming id: " + newID);
                         assert newID != null;
+                        idMapOOS.put(newID, new ObjectOutputStream(s.getOutputStream()));
                         idMapSocket.put(newID, s);
                         new Thread(() -> {
                             try {
@@ -130,18 +132,21 @@ public class BlockingProcess implements Runnable {
      * @return
      * @throws IOException
      */
-    protected final Socket handleSendConnection(int dst) throws IOException {
+    protected final ObjectOutputStream handleSendConnection(int dst) throws IOException {
         Socket s;
-        if (idMapSocket.containsKey(dst)) {
-            s = idMapSocket.get(dst);
+        ObjectOutputStream oos = null;
+        if (idMapOOS.containsKey(dst)) {
+            oos = idMapOOS.get(dst);
         } else {//this is first time connection
             s = new Socket();
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
             InetSocketAddress id;
-            idMapSocket.put(dst, s);
             id = idMapIp.get(dst);
             s.connect(id);
+            oos = new ObjectOutputStream(s.getOutputStream());
+            idMapOOS.put(dst, oos);
+            idMapSocket.put(dst, s);
             new Thread(() -> {
                 try {
                     unicast_receive(ipMapId.get(s.getRemoteSocketAddress()), new byte[8]);
@@ -150,7 +155,7 @@ public class BlockingProcess implements Runnable {
                 }
             }).start();
         }
-        return s;
+        return oos;
     }
 
     /**
@@ -162,17 +167,13 @@ public class BlockingProcess implements Runnable {
      */
     protected void unicast_send(int dst, byte[] msg) throws IOException {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
-        Socket s;
-        s = handleSendConnection(dst);
-        int msg_len = msg.length;
-        System.out.println("msg length: " + msg_len);
-        System.out.println("sending to: " + s.getRemoteSocketAddress());
+        ObjectOutputStream oos;
+        oos = handleSendConnection(dst);
         Packet p = new Packet(selfID, new String(msg));
         if (dst == selfID) {
             deliverQueue.add(p);
             return;
         }
-        ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
         oos.flush();// TODO:Do we need flush?
         oos.writeObject(p);
     }
@@ -187,9 +188,9 @@ public class BlockingProcess implements Runnable {
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
         System.out.println("listening to process " + s.getRemoteSocketAddress());
+        ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
             Packet p = null;
-            ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
             try {
                 p = (Packet) ois.readObject();
                 System.out.println("get new packet");

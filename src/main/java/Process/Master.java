@@ -2,11 +2,8 @@ package Process;
 
 
 import java.io.*;
-import java.nio.channels.ServerSocketChannel;
 import java.util.*;
 import java.net.*;
-import java.nio.*;
-import java.nio.channels.SocketChannel;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -46,11 +43,12 @@ public class Master extends BlockingProcess {
                     try {
                         Socket s = sock.accept();
                         System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
-                        if (!idMapSocket.containsValue(s)) {
+                        if (!idMapOOS.containsValue(s)) {
                             Integer newID = ipMapId.get(s.getRemoteSocketAddress());
                             System.out.println("incoming id: " + newID);
                             assert newID != null;
                             idMapSocket.put(newID, s);
+                            idMapOOS.put(newID, new ObjectOutputStream(s.getOutputStream()));
                         }
                         new Thread(new Runnable() {
                             @Override
@@ -90,7 +88,7 @@ public class Master extends BlockingProcess {
                         }, current.customDelay == -1 ? delay : current.customDelay);
                     }
                 }
-            }catch (InterruptedException e) {
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
@@ -105,19 +103,21 @@ public class Master extends BlockingProcess {
      * @return
      * @throws IOException
      */
-    public Socket MhandleSendConnection(int dst) throws IOException {
+    public ObjectOutputStream MhandleSendConnection(int dst) throws IOException {
         Socket s;
-        if (idMapSocket.containsKey(dst)) {
-            s = idMapSocket.get(dst);
+        ObjectOutputStream oos = null;
+        if (idMapOOS.containsKey(dst)) {
+            oos = idMapOOS.get(dst);
         } else {//this is first time connection
             s = new Socket();
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
-            InetSocketAddress id;
+            InetSocketAddress ip;
+            ip = idMapIp.get(dst);
+            s.connect(ip);
+            oos = new ObjectOutputStream(s.getOutputStream());
             idMapSocket.put(dst, s);
-            id = idMapIp.get(dst);
-            System.out.println(id);
-            s.connect(id);
+            idMapOOS.put(dst, oos);
             new Thread(() -> {
                 try {
                     master_receive(ipMapId.get(s.getRemoteSocketAddress()), new byte[8]);
@@ -126,7 +126,7 @@ public class Master extends BlockingProcess {
                 }
             }).start();
         }
-        return s;
+        return oos;
     }
 
     /**
@@ -139,18 +139,18 @@ public class Master extends BlockingProcess {
      */
     public void master_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
+        ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
             Message m = null;
-            ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
             try {
                 m = (Message) ois.readObject();
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-                this.headercounter++;
-                m.header = this.headercounter;
-                sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header, m.customDelay));
+            this.headercounter++;
+            m.header = this.headercounter;
+            sequence.offer(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header, m.customDelay));
 
             System.out.println("Sequencer Received: " + strmsg);
         }
@@ -165,8 +165,7 @@ public class Master extends BlockingProcess {
      */
     private void master_send(int dst, Message m) throws IOException {
         System.out.println("sending msg : " + m.msg + " to dst: " + dst);
-        Socket s = MhandleSendConnection(dst);
-        ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
+        ObjectOutputStream oos = MhandleSendConnection(dst);
         oos.flush();// TODO:Do we need flush.
         oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg, m.header, m.customDelay));
     }

@@ -1,5 +1,6 @@
 # CS425 MP1
 In this project, unicast, causal order multicast and total order multicast process.
+Group: Chuchao Luo(chuchao2), Wenhan Zhao(wenhanz3)
 (check README.md for better format)
 
 ## Basic schema

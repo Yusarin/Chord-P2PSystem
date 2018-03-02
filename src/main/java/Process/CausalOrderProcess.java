@@ -123,11 +123,8 @@ public class CausalOrderProcess extends BlockingProcess {
             LOGGER.info("Current VectorClock: " + clock);
             return;
         }
-        Socket s;
-        s = handleSendConnection(dst);
-        LOGGER.finest("The socket is connected?: " + s.isConnected());
-        LOGGER.finest("sending to: " + s.getRemoteSocketAddress());
-        ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
+        ObjectOutputStream oos;
+        oos = handleSendConnection(dst);
         while (true) {
             try {
                 writeLock.lock();
@@ -154,9 +151,9 @@ public class CausalOrderProcess extends BlockingProcess {
     protected void unicast_receive(int dst, byte[] msg) throws IOException {
         Socket s = idMapSocket.get(dst);
         LOGGER.finest("listening to process " + s.getRemoteSocketAddress());
+        ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
             Packet p = null;
-            ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
             try {
                 p = (Packet) ois.readObject();
                 LOGGER.finest("get new packet");
