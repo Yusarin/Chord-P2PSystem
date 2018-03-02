@@ -6,6 +6,8 @@ import java.net.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class TotalOrderProcess extends BlockingProcess {
@@ -160,8 +162,10 @@ public class TotalOrderProcess extends BlockingProcess {
             return;
         }
         oos = MhandleSendConnection(dst);
+        writeLock.lock();
         oos.flush();
         oos.writeObject(new Message(selfID, addr, new String(msg), 0, customDelay));
+        writeLock.unlock();
     }
 
     /**

@@ -9,6 +9,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,6 +27,7 @@ public class BlockingProcess implements Runnable {
     protected final int min_delay;
     protected final int max_delay;
     protected static final Logger LOGGER = Logger.getLogger(CausalOrderProcess.class.getName());
+    protected Lock writeLock = new ReentrantLock();
 
 
     public BlockingProcess(BlockingQueue q, int selfID, ConcurrentHashMap<Integer, InetSocketAddress> map,
@@ -174,8 +177,10 @@ public class BlockingProcess implements Runnable {
             deliverQueue.add(p);
             return;
         }
+        writeLock.lock();
         oos.flush();// TODO:Do we need flush?
         oos.writeObject(p);
+        writeLock.unlock();
     }
 
     /**

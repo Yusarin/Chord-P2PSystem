@@ -30,8 +30,6 @@ public class CausalOrderProcess extends BlockingProcess {
      */
     private final Condition condition = lock.newCondition();
 
-    private final Lock writeLock = new ReentrantLock();
-
     public CausalOrderProcess(BlockingQueue<String> q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map,
             int min_delay, int max_delay) throws IOException {
         super(q, ID, map, min_delay, max_delay);
