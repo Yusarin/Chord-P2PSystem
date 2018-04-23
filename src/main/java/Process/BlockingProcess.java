@@ -20,13 +20,11 @@ public class BlockingProcess implements Runnable {
     protected final Map<Integer, Socket> idMapSocket = new ConcurrentHashMap<>();//map id to socket
     protected final Map<InetSocketAddress, Integer> ipMapId;//map ip to id
     protected final Map<Integer, InetSocketAddress> idMapIp;//map id to ip
-    protected BlockingQueue deliverQueue = new LinkedBlockingQueue<Packet>(100);
     protected final int selfID;
     protected final InetSocketAddress addr;
     protected final ServerSocket sock;
     protected final int min_delay;
     protected final int max_delay;
-    protected static final Logger LOGGER = Logger.getLogger(CausalOrderProcess.class.getName());
     protected Lock writeLock = new ReentrantLock();
 
 
@@ -43,8 +41,6 @@ public class BlockingProcess implements Runnable {
         this.min_delay = min_delay;
         idMapIp = map;
         ipMapId = reverseMap(idMapIp);
-        LOGGER.setLevel(Level.FINEST);
-        LOGGER.info("Self PID: " + selfID);
     }
 
     /**
@@ -56,7 +52,6 @@ public class BlockingProcess implements Runnable {
                 try {
                     Socket s = sock.accept();
                     Integer newID;
-                    LOGGER.finest("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
                     if (!idMapOOS.containsValue(s)) {
                         newID = ipMapId.get(s.getRemoteSocketAddress());
                         System.out.println("incoming id: " + newID);
@@ -92,7 +87,6 @@ public class BlockingProcess implements Runnable {
         System.out.println("server is up");
         System.out.println("listening on " + sock);
         startAcceptingThread();
-        new Thread(new DeliverThread(deliverQueue, null)).start();// start a DeliverThread
         while (true) {
             try {
                 final String msg = (String) writeQueue.take();
@@ -113,8 +107,6 @@ public class BlockingProcess implements Runnable {
                                 }
                             }
                         }, delay);
-                    } else {
-                        LOGGER.warning("This PID is not exist");
                     }
                 } else {
                     throw new IllegalArgumentException();
@@ -122,7 +114,7 @@ public class BlockingProcess implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (IllegalArgumentException e) {
-                LOGGER.severe("not a legal command");
+                System.out.println("not a legal command");
             }
         }
     }
@@ -172,14 +164,14 @@ public class BlockingProcess implements Runnable {
         System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         ObjectOutputStream oos;
         oos = handleSendConnection(dst);
-        Packet p = new Packet(selfID, new String(msg));
+        Message message = new Message(selfID, addr, new String(msg));
         if (dst == selfID) {
-            deliverQueue.add(p);
+            System.out.println("You are sending message to yourself");
             return;
         }
         writeLock.lock();
         oos.flush();// TODO:Do we need flush?
-        oos.writeObject(p);
+        oos.writeObject(message);
         writeLock.unlock();
     }
 
@@ -195,14 +187,13 @@ public class BlockingProcess implements Runnable {
         System.out.println("listening to process " + s.getRemoteSocketAddress());
         ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
-            Packet p = null;
+            Message m = null;
             try {
-                p = (Packet) ois.readObject();
+                m = (Message) ois.readObject();
                 System.out.println("get new packet");
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
-            deliverQueue.add(p);
         }
     }
 
