@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/Chord-P2PSystem.iml" filepath="$PROJECT_DIR$/Chord-P2PSystem.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Chord-P2PSystem_main.iml" filepath="$PROJECT_DIR$/.idea/modules/Chord-P2PSystem_main.iml" group="Chord-P2PSystem" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Chord-P2PSystem_test.iml" filepath="$PROJECT_DIR$/.idea/modules/Chord-P2PSystem_test.iml" group="Chord-P2PSystem" />
+    </modules>
+  </component>
+</project>
