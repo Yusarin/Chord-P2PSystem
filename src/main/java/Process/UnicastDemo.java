@@ -17,7 +17,7 @@ public class UnicastDemo {
             int id = Integer.parseInt(args[0]);
             Config config = parseConfig(args[1]);
             if (id != 0)
-                new Thread(new BlockingProcess(q, id, config.m, config.minDelay, config.maxDelay)).start();
+                new Thread(new Node(q, id, config.m, config.minDelay, config.maxDelay)).start();
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
             if (args.length > 2) {
                 System.out.println("reading script...");
@@ -47,17 +47,6 @@ public class UnicastDemo {
         Integer max = Integer.parseInt(delays[3]);
         if (max == null || min == null) throw new IOException("wrong formatted config file");
         ConcurrentHashMap<Integer, InetSocketAddress> map = new ConcurrentHashMap<>();
-        line = file.readLine();
-        while (line != null) {
-            String[] peer = line.split(reg);
-            if (peer.length != 3) throw new IOException("wrong formatted config file");
-            Integer port = Integer.parseInt(peer[2]);
-            Integer ID = Integer.parseInt(peer[0]);
-            if (ID == null || port == null) throw new IOException("wrong formatted config file");
-            System.out.println(peer[1] + " : " + port);
-            map.put(ID, new InetSocketAddress(peer[1], port));
-            line = file.readLine();
-        }
         return new Config(map, min, max);
     }
 

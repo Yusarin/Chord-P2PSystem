@@ -148,8 +148,7 @@ public class Node extends BlockingProcess{
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            //TODO:Implement node recieve
-            System.out.println("Sequencer Received: " + strmsg);
+            //TODO:Implement node receive
         }
     }
 
@@ -168,7 +167,4 @@ public class Node extends BlockingProcess{
         //TODO:what should we do here?
     }
 
-    /**
-     * Reset the master node.
-     */
 }

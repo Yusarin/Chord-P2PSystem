@@ -23,6 +23,15 @@ public class Client extends BlockingProcess{
         additional_msg = "";
         this.idMapIp.put(0, new InetSocketAddress("127.0.0.1", this.alloc_port));
 
+        //Keys 0-255 Initially stored at Node 0.
+        for(int i = 0 ; i < 256 ; i++){
+            Local_Keys.add(i);
+        }
+
+        //Initialize finger table at Node 0.
+        for(int i = 0; i < 8 ; i++){
+            Finger_table.put(i,0);
+        }
     }
 
     @Override
@@ -75,6 +84,7 @@ public class Client extends BlockingProcess{
                             alloc_port += newnode;
                             m.put(newnode, new InetSocketAddress("127.0.0.1", alloc_port + newnode));
                             additional_msg = " "+alloc_port +" "+ newnode;
+                            // For Nodes, this map m will only contain its own value. For client, this map is responsible for all Nodes.
                             new Thread(new Node(new LinkedBlockingDeque<String>(), newnode, m, min_delay, max_delay)).start();
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -84,8 +94,10 @@ public class Client extends BlockingProcess{
                         continue;
                     }
 
+                    //TODO: Implement Key migration and Finger table change.
+
                 } else if (parsed[0].equals("find")) {
-                    //TODO:Implement find.
+
                     int initiate_node = Integer.parseInt(parsed[1]);
                     if(!idMapIp.containsKey(initiate_node)){
                         System.out.println("Node doesn't exist.");
@@ -211,8 +223,6 @@ public class Client extends BlockingProcess{
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            //TODO:Implement ack message handler and Client receive as Node 0.
-            System.out.println("Client Received: " + strmsg);
         }
     }
 
