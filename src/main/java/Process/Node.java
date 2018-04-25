@@ -18,6 +18,10 @@ public class Node extends BlockingProcess{
 
     public Node(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         super(q, ID, map, min_delay, max_delay);
+        int port_offset = map.get(selfID).getPort() - selfID;
+        for(int i = 0 ; i < 256 ; i++){
+            idMapIp.put(i, new InetSocketAddress("127.0.0.1", port_offset+i));
+        }
     }
 
     @Override
@@ -149,6 +153,106 @@ public class Node extends BlockingProcess{
             }
             String strmsg = m.Serial;
             //TODO:Implement node receive
+            String[] msgs = strmsg.split(",");
+            String real_msg = msgs[1];
+            if(real_msg.startsWith("show")){
+
+                String message = "s-show_fing ";
+                String table = "";
+                String keys = "";
+                if(real_msg.charAt(5) == 'a'){
+                    message = "a-show_fing ";
+                }
+                for(int i : Finger_table.keySet()){
+                    table += i+":";
+                    table += Finger_table.get(i)+",";
+                }
+                table = table.substring(0,table.length()-1);
+
+                for(int i : Local_Keys){
+                    keys += ",";
+                }
+                keys = keys.substring(0, keys.length()-1);
+
+                message += table + " ";
+                message += keys;
+                unicast_send(0, message.getBytes());
+
+            } else if(real_msg.startsWith("crash")){
+                //TODO: implement crash.
+            } else if(real_msg.startsWith("find")){
+                //TODO: implement find.
+            } else if(real_msg.startsWith("succ")){
+
+                String message = "resp_succ ";
+                message += this.successor;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("pred")){
+
+                String message = "resp_pred ";
+                message += this.successor;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("fing")){
+
+                String message = "resp_fing ";
+                String table = "";
+                for(int i : Finger_table.keySet()){
+                    table += i+",";
+                    table += Finger_table.get(i)+"#";
+                }
+                message += table;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("keys")){
+
+                String message = "resp_keys ";
+                String set = "";
+                for(int i : Local_Keys){
+                    set += i+"#";
+                }
+                message += set;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("setPred")){
+
+                String[] strs = real_msg.split(" ");
+                this.predecessor = Integer.parseInt(strs[1]);
+
+            } else if(real_msg.startsWith("setSucc")){
+
+                String[] strs = real_msg.split(" ");
+                this.successor = Integer.parseInt(strs[1]);
+
+            } else if(real_msg.startsWith("update_finger_table")){
+
+                String[] strs = real_msg.split(" ");
+                update_finger_table(Integer.parseInt(strs[1]), Integer.parseInt(strs[2]));
+
+            } else if(real_msg.startsWith("resp_succ")){
+
+                String[] strs = real_msg.split(" ");
+                wait_succ = strs[1];
+
+            } else if(real_msg.startsWith("resp_pred")){
+
+                String[] strs = real_msg.split(" ");
+                wait_pred = strs[1];
+
+            } else if(real_msg.startsWith("resp_fing")){
+
+                String[] strs = real_msg.split(" ");
+                wait_fin = strs[1];
+
+            } else if(real_msg.startsWith("resp_keys")){
+
+                String[] strs = real_msg.split(" ");
+                wait_keys = strs[1];
+
+            }
+
+
         }
     }
 

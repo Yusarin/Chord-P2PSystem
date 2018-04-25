@@ -20,6 +20,7 @@ public class BlockingProcess implements Runnable {
     protected final Map<Integer, Socket> idMapSocket = new ConcurrentHashMap<>();//map id to socket
     protected final Map<InetSocketAddress, Integer> ipMapId;//map ip to id
     protected final Map<Integer, InetSocketAddress> idMapIp;//map id to ip
+    protected final Map<Integer, InetSocketAddress> running;
     protected final int selfID;
     protected final InetSocketAddress addr;
     protected final ServerSocket sock;
@@ -30,10 +31,10 @@ public class BlockingProcess implements Runnable {
     public HashSet<Integer> Local_Keys;
     int successor;
     int predecessor;
-    String wait_succ = "w";
-    String wait_pred = "w";
-    String wait_fin = "w";
-    String wait_keys = "w";
+    String wait_succ = "wait";
+    String wait_pred = "wait";
+    String wait_fin = "wait";
+    String wait_keys = "wait";
 
 
     public BlockingProcess(BlockingQueue q, int selfID, ConcurrentHashMap<Integer, InetSocketAddress> map,
@@ -47,7 +48,8 @@ public class BlockingProcess implements Runnable {
         this.writeQueue = q;
         this.max_delay = max_delay;
         this.min_delay = min_delay;
-        idMapIp = map;
+        idMapIp = new HashMap<>();
+        this.running = map;
         Finger_table = new HashMap<>();
         Local_Keys = new HashSet<>();
         ipMapId = reverseMap(idMapIp);
@@ -299,6 +301,7 @@ public class BlockingProcess implements Runnable {
         Finger_table.put(0, ini);
         this.predecessor = askforpred(this.successor);
         setPred(this.successor, selfID);
+
 
         for(int i = 0; i < 7 ; i++){
             int start = getStart(selfID, i+1);

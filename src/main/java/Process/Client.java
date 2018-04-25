@@ -17,11 +17,14 @@ import java.util.concurrent.TimeUnit;
 public class Client extends BlockingProcess{
     Integer alloc_port;
     String additional_msg;
+    ConcurrentHashMap<Integer, String> showall = new ConcurrentHashMap<>();
     public Client(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         super(q, ID, map, min_delay, max_delay);
         this.alloc_port = (int)(3000 + Math.random()*12000);
         additional_msg = "";
-        this.idMapIp.put(0, new InetSocketAddress("127.0.0.1", this.alloc_port));
+
+        for(int i = 0 ; i < 256 ; i++)
+            this.idMapIp.put(i, new InetSocketAddress("127.0.0.1", this.alloc_port+i));
 
         //Keys 0-255 Initially stored at Node 0.
         for(int i = 0 ; i < 256 ; i++){
@@ -83,6 +86,7 @@ public class Client extends BlockingProcess{
                             ConcurrentHashMap<Integer, InetSocketAddress> m = new ConcurrentHashMap<>(this.idMapIp);
                             alloc_port += newnode;
                             m.put(newnode, new InetSocketAddress("127.0.0.1", alloc_port + newnode));
+                            this.running.put(newnode, new InetSocketAddress("127.0.0.1", alloc_port + newnode));
                             additional_msg = " "+alloc_port +" "+ newnode;
                             // For Nodes, this map m will only contain its own value. For client, this map is responsible for all Nodes.
                             new Thread(new Node(new LinkedBlockingDeque<String>(), newnode, m, min_delay, max_delay)).start();
@@ -94,7 +98,7 @@ public class Client extends BlockingProcess{
                         continue;
                     }
 
-                    //TODO: Implement Key migration and Finger table change.
+
 
                 } else if (parsed[0].equals("find")) {
 
@@ -123,12 +127,25 @@ public class Client extends BlockingProcess{
                             e.printStackTrace();
                         }
                     }
-                    continue;
 
                 } else if (parsed[0].equals("show")) {
 
                     if(parsed[1].equals("all")){
                         additional_msg = "";
+                        for (int i : running.keySet()) {
+                            final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
+                            new Timer().schedule(new TimerTask() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (i != selfID)
+                                            client_send(i, new Message(selfID, addr, msg + additional_msg));
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }, delay);
+                        }
                     } else {
                         int showid = Integer.parseInt(parsed[1]);
                         if (!idMapIp.containsKey(showid)) {
@@ -148,21 +165,6 @@ public class Client extends BlockingProcess{
                     continue;
                 }
 
-                //Basic Multicast for general use.
-                for (int i : idMapIp.keySet()) {
-                        final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
-                        new Timer().schedule(new TimerTask() {
-                            @Override
-                            public void run() {
-                                try {
-                                    if (i != selfID)
-                                        client_send(i, new Message(selfID, addr, msg + additional_msg)); //TODO:specify message to be send.
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }, delay);
-                    }
 
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -223,6 +225,141 @@ public class Client extends BlockingProcess{
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
+
+            String[] msgs = strmsg.split(",");
+            String real_msg = msgs[1];
+            if(real_msg.startsWith("show")){
+
+                String message = "s-show_fing ";
+                String table = "";
+                String keys = "";
+                if(real_msg.charAt(5) == 'a'){
+                    message = "a-show_fing ";
+                }
+                for(int i : Finger_table.keySet()){
+                    table += i+":";
+                    table += Finger_table.get(i)+",";
+                }
+                table = table.substring(0,table.length()-1);
+
+                for(int i : Local_Keys){
+                    keys += ",";
+                }
+                keys = keys.substring(0, keys.length()-1);
+
+                message += table + " ";
+                message += keys;
+                unicast_send(0, message.getBytes());
+
+            } else if(real_msg.startsWith("crash")){
+                //TODO: implement crash.
+            } else if(real_msg.startsWith("find")){
+                //TODO: implement find.
+            } else if(real_msg.startsWith("succ")){
+
+                String message = "resp_succ ";
+                message += this.successor;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("pred")){
+
+                String message = "resp_pred ";
+                message += this.successor;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("fing")){
+
+                String message = "resp_fing ";
+                String table = "";
+                for(int i : Finger_table.keySet()){
+                    table += i+",";
+                    table += Finger_table.get(i)+"#";
+                }
+                message += table;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("keys")){
+
+                String message = "resp_keys ";
+                String set = "";
+                for(int i : Local_Keys){
+                    set += i+"#";
+                }
+                message += set;
+                unicast_send(dst, message.getBytes());
+
+            } else if(real_msg.startsWith("setPred")){
+
+                String[] strs = real_msg.split(" ");
+                this.predecessor = Integer.parseInt(strs[1]);
+
+            } else if(real_msg.startsWith("setSucc")){
+
+                String[] strs = real_msg.split(" ");
+                this.successor = Integer.parseInt(strs[1]);
+
+            } else if(real_msg.startsWith("update_finger_table")){
+
+                String[] strs = real_msg.split(" ");
+                update_finger_table(Integer.parseInt(strs[1]), Integer.parseInt(strs[2]));
+
+            } else if(real_msg.startsWith("resp_succ")){
+
+                String[] strs = real_msg.split(" ");
+                wait_succ = strs[1];
+
+            } else if(real_msg.startsWith("resp_pred")){
+
+                String[] strs = real_msg.split(" ");
+                wait_pred = strs[1];
+
+            } else if(real_msg.startsWith("resp_fing")){
+
+                String[] strs = real_msg.split(" ");
+                wait_fin = strs[1];
+
+            } else if(real_msg.startsWith("resp_keys")){
+
+                String[] strs = real_msg.split(" ");
+                wait_keys = strs[1];
+
+            } else if(real_msg.startsWith("s-show_fing")){
+
+                String[] strs = real_msg.split(" ");
+                System.out.println(dst);
+                System.out.println(strs[1]);
+                System.out.println(strs[2]);
+
+            } else if(real_msg.startsWith("a-show_fing")){
+
+                //Print record from node 0.
+                System.out.println(0);
+                String mytable = "";
+                for(int i : Finger_table.keySet()){
+                    mytable += i+":";
+                    mytable += Finger_table.get(i)+",";
+                }
+                System.out.println(mytable.substring(0, mytable.length()-1));
+
+                String set = "";
+                for(int i : Local_Keys){
+                    set += i+",";
+                }
+                System.out.println(set.substring(0, set.length()-1));
+
+                String[] strs = real_msg.split(" ");
+                showall.put(dst, strs[1] + " " + strs[2]);
+
+                if(showall.size() == running.size()){
+                    for(int i : showall.keySet()){
+                        System.out.println(i);
+                        String[] ss = showall.get(i).split(" ");
+                        System.out.println(ss[0]);
+                        System.out.println(ss[1]);
+                    }
+                }
+
+            }
         }
     }
 
