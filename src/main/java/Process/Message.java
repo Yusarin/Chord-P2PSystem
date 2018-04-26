@@ -13,6 +13,6 @@ public class Message implements Serializable{
         this.Sender_ID = ID;
         this.Sender_addr = addr;
         this.msg = msg;
-        this.Serial = this.Sender_ID +","+ msg;
+        this.Serial = this.Sender_ID +";"+ msg;
     }
 }

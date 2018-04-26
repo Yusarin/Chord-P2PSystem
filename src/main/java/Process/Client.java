@@ -20,7 +20,8 @@ public class Client extends BlockingProcess{
     ConcurrentHashMap<Integer, String> showall = new ConcurrentHashMap<>();
     public Client(BlockingQueue q, int ID, ConcurrentHashMap<Integer, InetSocketAddress> map, int min_delay, int max_delay) throws IOException {
         super(q, ID, map, min_delay, max_delay);
-        this.alloc_port = (int)(3000 + Math.random()*12000);
+
+        this.alloc_port = (int)(4000+Math.random()*12000);
         additional_msg = "";
 
         for(int i = 0 ; i < 256 ; i++)
@@ -35,19 +36,28 @@ public class Client extends BlockingProcess{
         for(int i = 0; i < 8 ; i++){
             Finger_table.put(i,0);
         }
+
+        this.addr = idMapIp.get(selfID);
+        ipMapId = reverseMap(idMapIp);
+        this.sock.bind(this.addr);
+
     }
 
     @Override
     public void run() {
         System.out.println("Client is up");
+        System.out.println("My ip is");
+        System.out.println(this.addr);
         //System.out.println("listening on " + sock);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while (true) {
                     try {
+                        System.out.println("Accepting");
                         Socket s = sock.accept();
                         System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
+                        System.out.println("Listening from "+s.getRemoteSocketAddress());
                         if (!idMapOOS.containsValue(s)) {
                             Integer newID = ipMapId.get(s.getRemoteSocketAddress());
                             System.out.println("incoming id: " + newID);
@@ -85,7 +95,6 @@ public class Client extends BlockingProcess{
                         try {
                             ConcurrentHashMap<Integer, InetSocketAddress> m = new ConcurrentHashMap<>(this.idMapIp);
                             alloc_port += newnode;
-                            m.put(newnode, new InetSocketAddress("127.0.0.1", alloc_port + newnode));
                             this.running.put(newnode, new InetSocketAddress("127.0.0.1", alloc_port + newnode));
                             additional_msg = " "+alloc_port +" "+ newnode;
                             // For Nodes, this map m will only contain its own value. For client, this map is responsible for all Nodes.
@@ -131,6 +140,20 @@ public class Client extends BlockingProcess{
                 } else if (parsed[0].equals("show")) {
 
                     if(parsed[1].equals("all")){
+                        //Print record from node 0.
+                        System.out.println(0);
+                        String mytable = "";
+                        for(int i : Finger_table.keySet()){
+                            mytable += i+":";
+                            mytable += Finger_table.get(i)+",";
+                        }
+                        System.out.println(mytable.substring(0, mytable.length()-1));
+
+                        String set = "";
+                        for(int i : Local_Keys){
+                            set += i+",";
+                        }
+                        System.out.println(set.substring(0, set.length()-1));
                         additional_msg = "";
                         for (int i : running.keySet()) {
                             final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
@@ -225,15 +248,17 @@ public class Client extends BlockingProcess{
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-
-            String[] msgs = strmsg.split(",");
+            System.out.println(strmsg);
+            String[] msgs = strmsg.split(";");
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
+
+                System.out.println("Re show");
 
                 String message = "s-show_fing ";
                 String table = "";
                 String keys = "";
-                if(real_msg.charAt(5) == 'a'){
+                if(real_msg.equals("show all")){
                     message = "a-show_fing ";
                 }
                 for(int i : Finger_table.keySet()){
@@ -276,6 +301,8 @@ public class Client extends BlockingProcess{
                     table += Finger_table.get(i)+"#";
                 }
                 message += table;
+                message = message.substring(0, message.length()-1);
+
                 unicast_send(dst, message.getBytes());
 
             } else if(real_msg.startsWith("keys")){
@@ -286,6 +313,8 @@ public class Client extends BlockingProcess{
                     set += i+"#";
                 }
                 message += set;
+                message = message.substring(0, message.length()-1);
+
                 unicast_send(dst, message.getBytes());
 
             } else if(real_msg.startsWith("setPred")){
@@ -323,6 +352,17 @@ public class Client extends BlockingProcess{
                 String[] strs = real_msg.split(" ");
                 wait_keys = strs[1];
 
+            } else if(real_msg.startsWith("rmkeys")){
+
+                //Update finger table.
+                String[] strs = real_msg.split(" ");
+                int thres = Integer.parseInt(strs[1]);
+                for(int i : Local_Keys){
+                    if(i < thres) {
+                        Local_Keys.remove(i);
+                    }
+                }
+
             } else if(real_msg.startsWith("s-show_fing")){
 
                 String[] strs = real_msg.split(" ");
@@ -331,21 +371,6 @@ public class Client extends BlockingProcess{
                 System.out.println(strs[2]);
 
             } else if(real_msg.startsWith("a-show_fing")){
-
-                //Print record from node 0.
-                System.out.println(0);
-                String mytable = "";
-                for(int i : Finger_table.keySet()){
-                    mytable += i+":";
-                    mytable += Finger_table.get(i)+",";
-                }
-                System.out.println(mytable.substring(0, mytable.length()-1));
-
-                String set = "";
-                for(int i : Local_Keys){
-                    set += i+",";
-                }
-                System.out.println(set.substring(0, set.length()-1));
 
                 String[] strs = real_msg.split(" ");
                 showall.put(dst, strs[1] + " " + strs[2]);

@@ -9,19 +9,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 
-public class UnicastDemo {
+public class RunClient {
     public static void main(String[] args) throws IOException {
         System.out.println("please send msg");
         BlockingQueue q = new LinkedBlockingDeque<String>(100);
         try {
-            int id = Integer.parseInt(args[0]);
-            Config config = parseConfig(args[1]);
-            if (id != 0)
-                new Thread(new Node(q, id, config.m, config.minDelay, config.maxDelay)).start();
+            Config config = parseConfig(args[0]);
+            new Thread(new Client(q, 0, config.m, config.minDelay, config.maxDelay)).start();
             BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-            if (args.length > 2) {
+            if (args.length > 1) {
                 System.out.println("reading script...");
-                ArrayList<String> lines = readScript(args[2]);
+                ArrayList<String> lines = readScript(args[1]);
                 if (lines != null)
                     for (String line : lines) {
                         q.add(line);

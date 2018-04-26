@@ -22,12 +22,16 @@ public class Node extends BlockingProcess{
         for(int i = 0 ; i < 256 ; i++){
             idMapIp.put(i, new InetSocketAddress("127.0.0.1", port_offset+i));
         }
+
+        this.addr = idMapIp.get(selfID);
+        ipMapId = reverseMap(idMapIp);
+        this.sock.bind(this.addr);
     }
 
     @Override
     public void run() {
-        System.out.println("Node "+this.selfID+" is up");
-        //System.out.println("listening on " + sock);
+
+        System.out.println("Node is up");
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -35,6 +39,7 @@ public class Node extends BlockingProcess{
                     try {
                         Socket s = sock.accept();
                         System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
+                        System.out.println("Listening from "+s.getRemoteSocketAddress());
                         if (!idMapOOS.containsValue(s)) {
                             Integer newID = ipMapId.get(s.getRemoteSocketAddress());
                             System.out.println("incoming id: " + newID);
@@ -46,7 +51,7 @@ public class Node extends BlockingProcess{
                             @Override
                             public void run() {
                                 try {
-                                    node_receive(ipMapId.get(s.getRemoteSocketAddress()));
+                                    unicast_receive(ipMapId.get(s.getRemoteSocketAddress()));
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
@@ -98,6 +103,11 @@ public class Node extends BlockingProcess{
 //            }
 //
 //        }
+        try {
+            join(0);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -125,7 +135,7 @@ public class Node extends BlockingProcess{
             idMapOOS.put(dst, oos);
             new Thread(() -> {
                 try {
-                    node_receive(ipMapId.get(s.getRemoteSocketAddress()));
+                    unicast_receive(ipMapId.get(s.getRemoteSocketAddress()));
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -142,6 +152,7 @@ public class Node extends BlockingProcess{
      * @throws IOException
      */
     public void node_receive(int dst) throws IOException {
+        System.out.println("Node Receive");
         Socket s = idMapSocket.get(dst);
         ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
@@ -152,15 +163,15 @@ public class Node extends BlockingProcess{
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            //TODO:Implement node receive
-            String[] msgs = strmsg.split(",");
+            System.out.println(strmsg);
+            String[] msgs = strmsg.split(";");
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
 
                 String message = "s-show_fing ";
                 String table = "";
                 String keys = "";
-                if(real_msg.charAt(5) == 'a'){
+                if(real_msg.equals("show all")){
                     message = "a-show_fing ";
                 }
                 for(int i : Finger_table.keySet()){
@@ -203,6 +214,8 @@ public class Node extends BlockingProcess{
                     table += Finger_table.get(i)+"#";
                 }
                 message += table;
+                message = message.substring(0, message.length()-1);
+
                 unicast_send(dst, message.getBytes());
 
             } else if(real_msg.startsWith("keys")){
@@ -213,6 +226,8 @@ public class Node extends BlockingProcess{
                     set += i+"#";
                 }
                 message += set;
+                message = message.substring(0, message.length()-1);
+
                 unicast_send(dst, message.getBytes());
 
             } else if(real_msg.startsWith("setPred")){
@@ -231,6 +246,7 @@ public class Node extends BlockingProcess{
                 update_finger_table(Integer.parseInt(strs[1]), Integer.parseInt(strs[2]));
 
             } else if(real_msg.startsWith("resp_succ")){
+                System.out.println("Re:"+real_msg);
 
                 String[] strs = real_msg.split(" ");
                 wait_succ = strs[1];
@@ -250,6 +266,16 @@ public class Node extends BlockingProcess{
                 String[] strs = real_msg.split(" ");
                 wait_keys = strs[1];
 
+            } else if(real_msg.startsWith("rmkeys")){
+
+                //Update finger table.
+                String[] strs = real_msg.split(" ");
+                int thres = Integer.parseInt(strs[1]);
+                for(int i : Local_Keys){
+                    if(i < thres) {
+                        Local_Keys.remove(i);
+                    }
+                }
             }
 
 
