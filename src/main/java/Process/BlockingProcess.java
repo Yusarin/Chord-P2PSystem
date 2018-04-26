@@ -238,6 +238,34 @@ public class BlockingProcess implements Runnable {
                 //TODO: implement crash.
             } else if(real_msg.startsWith("find")){
                 //TODO: implement find.
+                String[] strs = real_msg.split(" ");
+                int key = Integer.parseInt(strs[2]);
+                if(this.Local_Keys.contains(key)){
+                    String message = "found "+ selfID + " in " + key;
+                    unicast_send(0, message.getBytes());
+                } else {
+                    //Case1: Finger range includes 0.
+                    if(this.Finger_table.get(7) < selfID){
+                        if(key < selfID && key > this.Finger_table.get(7)){
+                            String message = "find " + this.Finger_table.get(7) + " " + key;
+                            unicast_send(this.Finger_table.get(7), message.getBytes());
+                        } else {
+                            String message = "find " + this.successor + " " + key;
+                            unicast_send(this.successor, message.getBytes());
+                        }
+                    }
+                    //Case2: Finger range doesn't include 0.
+                    else {
+                        if(key < selfID || key > this.Finger_table.get(7)){
+                            String message = "find " + this.Finger_table.get(7) + " " + key;
+                            unicast_send(this.Finger_table.get(7), message.getBytes());
+                        } else {
+                            String message = "find " + this.successor + " " + key;
+                            unicast_send(this.successor, message.getBytes());
+                        }
+                    }
+
+                }
             } else if(real_msg.startsWith("succ")){
 
                 String message = "resp_succ ";
@@ -349,6 +377,7 @@ public class BlockingProcess implements Runnable {
             int node_num = remotetable.get(i);
             System.out.println(i+" is good");
             if(node_num > n && node_num < id){
+                System.out.println("Return node_num");
                 return node_num;
             }
         }

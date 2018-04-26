@@ -112,7 +112,11 @@ public class Client extends BlockingProcess{
                 } else if (parsed[0].equals("find")) {
 
                     int initiate_node = Integer.parseInt(parsed[1]);
-                    if(!idMapIp.containsKey(initiate_node)){
+                    int key = Integer.parseInt(parsed[2]);
+                    if(key < 0 || key > 255){
+                        System.out.println("key " + key + " not found.");
+                    }
+                    if(!running.containsKey(initiate_node)){
                         System.out.println("Node doesn't exist.");
                     } else {
                         try{
@@ -126,7 +130,7 @@ public class Client extends BlockingProcess{
                 } else if (parsed[0].equals("crash")) {
 
                     int crash = Integer.parseInt(parsed[1]);
-                    if(!idMapIp.containsKey(crash)){
+                    if(!running.containsKey(crash)){
                         System.out.println("Node doesn't exist.");
                     } else {
                         try{
@@ -384,6 +388,8 @@ public class Client extends BlockingProcess{
                     }
                 }
 
+            } else if(real_msg.startsWith("found")){
+                System.out.println(real_msg);
             }
         }
     }
