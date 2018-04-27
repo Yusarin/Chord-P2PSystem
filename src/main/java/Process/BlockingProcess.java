@@ -400,6 +400,20 @@ public class BlockingProcess implements Runnable {
     //Ask Node n to find predecessor of id.
     public int find_predecessor(int n, int id) throws IOException{
         if(id > 256) id -= 256;
+        if(n == 0) {
+            List<Integer> runn = new ArrayList<>();
+            runn.add(0);
+            for(int i : this.running.keySet()){
+                runn.add(i);
+            }
+            Collections.sort(runn);
+            Collections.reverse(runn);
+            if(runn.get(0) > id) return 0;
+            for(int j : runn){
+                System.out.println("j="+j);
+                if(j < id) return j;
+            }
+        }
         int np = n;
         int npsucc = askforsucc(np);
         System.out.println("succ of "+np+" is "+npsucc);
@@ -477,7 +491,6 @@ public class BlockingProcess implements Runnable {
         while(wait_fin.equals("wait")){
             do_job();
         };
-
         String[] entries = wait_fin.split("#");
         HashMap<Integer, Integer> map = new HashMap<>();
         for(int i = 0 ; i < entries.length ; i++){

@@ -189,6 +189,9 @@ public class Client extends BlockingProcess{
                             System.out.println("Node doesn't exist.");
                         } else {
                             System.out.println("Send to" + showid);
+                            for(int i : Finger_table.keySet()){
+                                System.out.println("########"+i+","+Finger_table.get(i));
+                            }
                             try {
                                 unicast_send(showid, msg.getBytes());
                             } catch (IOException e) {
