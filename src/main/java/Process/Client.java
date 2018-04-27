@@ -6,6 +6,7 @@ import java.io.ObjectOutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.StandardSocketOptions;
+import java.util.*;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -93,12 +94,11 @@ public class Client extends BlockingProcess{
                     int newnode = Integer.parseInt(parsed[1]);
                     if (newnode != 0) {
                         try {
-                            ConcurrentHashMap<Integer, InetSocketAddress> m = new ConcurrentHashMap<>(this.idMapIp);
-                            alloc_port += newnode;
                             this.running.put(newnode, new InetSocketAddress("127.0.0.1", alloc_port + newnode));
-                            additional_msg = " "+alloc_port +" "+ newnode;
                             // For Nodes, this map m will only contain its own value. For client, this map is responsible for all Nodes.
+                            ConcurrentHashMap<Integer, InetSocketAddress> m = new ConcurrentHashMap<>(this.running);
                             new Thread(new Node(new LinkedBlockingDeque<String>(), newnode, m, min_delay, max_delay)).start();
+
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -257,8 +257,6 @@ public class Client extends BlockingProcess{
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
 
-                System.out.println("Re show");
-
                 String message = "s-show_fing ";
                 String table = "";
                 String keys = "";
@@ -269,19 +267,19 @@ public class Client extends BlockingProcess{
                     table += i+":";
                     table += Finger_table.get(i)+",";
                 }
-                table = table.substring(0,table.length()-1);
+                if(table.length() > 1)
+                    table = table.substring(0,table.length()-1);
 
                 for(int i : Local_Keys){
-                    keys += ",";
+                    keys += i+",";
                 }
-                keys = keys.substring(0, keys.length()-1);
+                if(keys.length() > 1)
+                    keys = keys.substring(0, keys.length()-1);
 
                 message += table + " ";
                 message += keys;
                 unicast_send(0, message.getBytes());
 
-            } else if(real_msg.startsWith("crash")){
-                //TODO: implement crash.
             } else if(real_msg.startsWith("find")){
                 //TODO: implement find.
             } else if(real_msg.startsWith("succ")){
@@ -330,6 +328,11 @@ public class Client extends BlockingProcess{
 
                 String[] strs = real_msg.split(" ");
                 this.successor = Integer.parseInt(strs[1]);
+                System.out.println("Set successor"+" "+this.successor);
+                for(int i = 0 ; getStart(selfID, i) < this.successor && i < 8 ; i++){
+                    this.Finger_table.put(i,this.successor);
+                    System.out.println("Update Fin"+i+":"+this.successor);
+                }
 
             } else if(real_msg.startsWith("update_finger_table")){
 
@@ -361,11 +364,15 @@ public class Client extends BlockingProcess{
                 //Update finger table.
                 String[] strs = real_msg.split(" ");
                 int thres = Integer.parseInt(strs[1]);
-                for(int i : Local_Keys){
-                    if(i < thres) {
+                List<Integer> KeyList = new ArrayList<>();
+                KeyList.addAll(Local_Keys);
+                for(int i : KeyList){
+                    if(i <= thres) {
                         Local_Keys.remove(i);
                     }
                 }
+
+                System.out.println("Keys in "+ selfID+" removed");
 
             } else if(real_msg.startsWith("s-show_fing")){
 
@@ -402,7 +409,7 @@ public class Client extends BlockingProcess{
      * @throws IOException
      */
     private void client_send(int dst, Message m) throws IOException {
-        System.out.println("sending msg : " + m.msg + " to dst: " + dst);
+        //System.out.println("sending msg : " + m.msg + " to dst: " + dst);
         ObjectOutputStream oos = ChandleSendConnection(dst);
         oos.flush();// TODO:Do we need flush.
         oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg));

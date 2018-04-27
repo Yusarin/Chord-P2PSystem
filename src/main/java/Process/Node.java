@@ -32,6 +32,8 @@ public class Node extends BlockingProcess{
     public void run() {
 
         System.out.println("Node is up");
+        System.out.println("My ip is");
+        System.out.println(this.addr);
         new Thread(new Runnable() {
             @Override
             public void run() {

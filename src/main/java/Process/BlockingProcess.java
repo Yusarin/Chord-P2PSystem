@@ -20,7 +20,7 @@ public class BlockingProcess implements Runnable {
     protected final Map<Integer, Socket> idMapSocket = new ConcurrentHashMap<>();//map id to socket
     protected Map<InetSocketAddress, Integer> ipMapId;//map ip to id
     protected final Map<Integer, InetSocketAddress> idMapIp;//map id to ip
-    protected final Map<Integer, InetSocketAddress> running;
+    protected Map<Integer, InetSocketAddress> running = new ConcurrentHashMap<>();;
     protected final int selfID;
     protected InetSocketAddress addr;
     protected ServerSocket sock;
@@ -87,7 +87,6 @@ public class BlockingProcess implements Runnable {
                 }
             }
         }).start();
-        System.out.println("accepting thread up");
     }
 
     /**
@@ -98,8 +97,7 @@ public class BlockingProcess implements Runnable {
      */
     @Override
     public void run() {
-        System.out.println("server is up");
-        System.out.println("listening on " + sock);
+
         startAcceptingThread();
         while (true) {
             try {
@@ -151,8 +149,9 @@ public class BlockingProcess implements Runnable {
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
             InetSocketAddress id;
+            System.out.println("dst="+dst);
             id = idMapIp.get(dst);
-            System.out.println(id);
+            System.out.println(selfID+"Connecting to" + id);
             s.connect(id);
             oos = new ObjectOutputStream(s.getOutputStream());
             idMapOOS.put(dst, oos);
@@ -176,14 +175,14 @@ public class BlockingProcess implements Runnable {
      * @throws IOException
      */
     protected void unicast_send(int dst, byte[] msg) throws IOException {
-        System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
-        ObjectOutputStream oos;
-        oos = handleSendConnection(dst);
-        Message message = new Message(selfID, addr, new String(msg));
+        //System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
         if (dst == selfID) {
             System.out.println("You are sending message to yourself");
             return;
         }
+        ObjectOutputStream oos;
+        oos = handleSendConnection(dst);
+        Message message = new Message(selfID, addr, new String(msg));
         writeLock.lock();
         oos.flush();// TODO:Do we need flush?
         oos.writeObject(message);
@@ -197,7 +196,6 @@ public class BlockingProcess implements Runnable {
      * @throws IOException
      */
     protected void unicast_receive(int dst) throws IOException {
-        System.out.println("Unicast Receive");
         Socket s = idMapSocket.get(dst);
         ObjectInputStream ois = new ObjectInputStream(s.getInputStream());
         while (true) {
@@ -208,7 +206,6 @@ public class BlockingProcess implements Runnable {
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            System.out.println(strmsg);
             String[] msgs = strmsg.split(";");
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
@@ -223,12 +220,14 @@ public class BlockingProcess implements Runnable {
                     table += i+":";
                     table += Finger_table.get(i)+",";
                 }
-                table = table.substring(0,table.length()-1);
+                if(table.length() > 1)
+                    table = table.substring(0,table.length()-1);
 
                 for(int i : Local_Keys){
-                    keys += ",";
+                    keys += i+",";
                 }
-                keys = keys.substring(0, keys.length()-1);
+                if(keys.length() > 1)
+                    keys = keys.substring(0, keys.length()-1);
 
                 message += table + " ";
                 message += keys;
@@ -310,6 +309,11 @@ public class BlockingProcess implements Runnable {
 
                 String[] strs = real_msg.split(" ");
                 this.successor = Integer.parseInt(strs[1]);
+                System.out.println("Set successor"+" "+this.successor);
+                for(int i = 0 ; getStart(selfID, i) < this.successor && i < 8 ; i++){
+                    this.Finger_table.put(i,this.successor);
+                    System.out.println("Update Fin"+i+":"+this.successor);
+                }
 
             } else if(real_msg.startsWith("update_finger_table")){
 
@@ -317,7 +321,6 @@ public class BlockingProcess implements Runnable {
                 update_finger_table(Integer.parseInt(strs[1]), Integer.parseInt(strs[2]));
 
             } else if(real_msg.startsWith("resp_succ")){
-                System.out.println("Re:"+real_msg);
 
                 String[] strs = real_msg.split(" ");
                 wait_succ = strs[1];
@@ -339,21 +342,36 @@ public class BlockingProcess implements Runnable {
 
             } else if(real_msg.startsWith("rmkeys")){
 
-                //Update finger table.
+                //Update keys
                 String[] strs = real_msg.split(" ");
                 int thres = Integer.parseInt(strs[1]);
-                for(int i : Local_Keys){
-                    if(i < thres) {
+                List<Integer> KeyList = new ArrayList<>();
+                KeyList.addAll(Local_Keys);
+                for(int i : KeyList){
+                    if(i <= thres) {
                         Local_Keys.remove(i);
                     }
                 }
             }
-
-
         }
     }
     //Ask Node n to find successor of id.
     public int find_successor(int n, int id) throws IOException{
+        if(id > 256) id -= 256;
+        if(n == 0) {
+            List<Integer> runn = new ArrayList<>();
+            runn.add(0);
+            for(int i : this.running.keySet()){
+                System.out.println("Key in running"+i);
+                runn.add(i);
+            }
+            Collections.sort(runn);
+            if(runn.get(runn.size()-1) <= id) return 0;
+            for(int j : runn){
+                System.out.println("j="+j);
+                if(j > id) return j;
+            }
+        }
         int np = find_predecessor(n, id);
         return askforsucc(np);
     }
@@ -361,10 +379,28 @@ public class BlockingProcess implements Runnable {
 
     //Ask Node n to find predecessor of id.
     public int find_predecessor(int n, int id) throws IOException{
+        if(id > 256) id -= 256;
         int np = n;
-        while(id <= np || id > askforsucc(np)){
-            System.out.println("In find predecessor while");
+        int npsucc = askforsucc(np);
+        System.out.println("succ of "+np+" is "+npsucc);
+        boolean cond;
+        if(np < npsucc){
+            cond = id <= np || id > npsucc;
+        } else {
+            cond = id <= np && id > npsucc;
+        }
+        while(cond){
+
             np = closest_preceding_finger(np, id);
+            System.out.println("np now is "+np);
+            npsucc = askforsucc(np);
+            if(np < npsucc){
+                cond = id <= np || id > npsucc;
+            } else {
+                cond = id <= np && id > npsucc;
+            }
+//            if(tmp == np) break;
+//            else np = tmp;
         }
         return np;
     }
@@ -372,12 +408,16 @@ public class BlockingProcess implements Runnable {
     public int closest_preceding_finger(int n, int id) throws IOException{
         HashMap<Integer, Integer> remotetable = new HashMap<>();
         remotetable = askforfingertable(n);
+        System.out.println("remotetable from "+n+".size:"+remotetable.size());
         for(int i = 7 ; i >= 0 ; i--){
 
             int node_num = remotetable.get(i);
-            System.out.println(i+" is good");
-            if(node_num > n && node_num < id){
-                System.out.println("Return node_num");
+            boolean cond;
+            if(n < id)
+                cond = node_num > n && node_num < id;
+            else
+                cond = node_num > n || node_num < id;
+            if(cond){
                 return node_num;
             }
         }
@@ -386,24 +426,24 @@ public class BlockingProcess implements Runnable {
 
 
     public int askforsucc(int id) throws IOException{
+        if(id == selfID) return this.successor;
         String message = "succ";
         unicast_send(id, message.getBytes());
         while(wait_succ.equals("wait")){
             do_job();
         };
-        System.out.println("succ changed");
         int res = Integer.parseInt(wait_succ);
         wait_succ = "wait";
         return res;
     }
 
     public int askforpred(int id) throws IOException{
+        if(id == selfID) return this.predecessor;
         String message = "pred";
         unicast_send(id, message.getBytes());
         while(wait_pred.equals("wait")){
             do_job();
         };
-        System.out.println("pred changed");
 
         int res = Integer.parseInt(wait_pred);
         wait_pred = "wait";
@@ -411,13 +451,12 @@ public class BlockingProcess implements Runnable {
     }
 
     public HashMap askforfingertable(int id) throws IOException{
+        if(id == selfID) return this.Finger_table;
         String message = "fing";
         unicast_send(id, message.getBytes());
         while(wait_fin.equals("wait")){
             do_job();
         };
-        System.out.println("fin changed");
-        System.out.println(wait_fin);
 
         String[] entries = wait_fin.split("#");
         HashMap<Integer, Integer> map = new HashMap<>();
@@ -426,19 +465,25 @@ public class BlockingProcess implements Runnable {
             if(each.length > 1)
                 map.put(Integer.parseInt(each[0]), Integer.parseInt(each[1]));
         }
-        System.out.println("map size:"+map.size());
         wait_fin = "wait";
         return map;
     }
 
     public String[] askforkeys(int id) throws IOException{
+        if(id == selfID){
+            String[] res= new String[Local_Keys.size()];
+            int cnt = 0;
+            for(int i : Local_Keys){
+                res[cnt] = ""+i;
+                cnt += 1;
+            }
+            return res;
+        }
         String message = "keys";
         unicast_send(id, message.getBytes());
         while(wait_keys.equals("wait")){
             do_job();
         };
-        System.out.println("keys changed");
-
         String[] res = wait_keys.split("#");
         return res;
     }
@@ -472,16 +517,27 @@ public class BlockingProcess implements Runnable {
     public void init_finger_table(int np) throws IOException{
         int ini = find_successor(np, getStart(selfID, 0));
         Finger_table.put(0, ini);
+        this.successor = ini;
+        System.out.println("Successor of "+selfID+" is "+this.successor);
         this.predecessor = askforpred(this.successor);
+        System.out.println("Predecessor of "+selfID+" is "+this.predecessor);
         setPred(this.successor, selfID);
+        setSucc(this.predecessor, selfID);
 
 
         for(int i = 0; i < 7 ; i++){
             int start = getStart(selfID, i+1);
-            if(start >= selfID && start < Finger_table.get(i)){
+            boolean cond;
+            if(selfID < Finger_table.get(i))
+                cond = start >= selfID && start < Finger_table.get(i);
+            else
+                cond = start >= selfID || start < Finger_table.get(i);
+            if(cond){
+                System.out.println("Table successfully updated1 : Node"+selfID+","+i+":"+Finger_table.get(i));
                 Finger_table.put(i+1, Finger_table.get(i));
             } else{
-                int val = find_successor(np, start);
+                int val = find_successor(0, start);
+                System.out.println("Table successfully updated2 : Node"+selfID+","+i+":"+val);
                 Finger_table.put(i+1, val);
             }
         }
@@ -489,17 +545,35 @@ public class BlockingProcess implements Runnable {
 
     public void update_others() throws IOException{
         for(int i = 0 ; i < 8 ; i++){
-            int p = find_predecessor(selfID, selfID - (int)Math.pow(2,i));
+            int id = selfID - (int)Math.pow(2,i);
+            if(id < 0) {
+                id += 256;
+            }
+            int p = find_predecessor(selfID, id);
+            System.out.println("2Predecessor of "+id+" is "+p);
             String msg = "update_finger_table "+selfID+" "+i;
             unicast_send(p, msg.getBytes());
         }
     }
 
     public void update_finger_table(int s, int i) throws IOException{
-        if(s >= selfID && s < Finger_table.get(i)){
+        boolean cond;
+        System.out.println("Interval ["+selfID+","+Finger_table.get(i)+")");
+        if(selfID < Finger_table.get(i))
+            cond = s > selfID && s < Finger_table.get(i);
+        else //equal case.
+            cond = s > selfID || s < Finger_table.get(i);
+        if(cond){
             Finger_table.put(i, s);
+            System.out.println(selfID+" Update finger table"+s+" "+i);
+            if(i == 0 && s != selfID) {
+                this.successor = s;
+                System.out.println("2.Successor of "+selfID+" is "+this.successor);
+            }
             int p = this.predecessor;
+
             String msg = "update_finger_table "+s+" "+i;
+
             unicast_send(p, msg.getBytes());
         }
     }
