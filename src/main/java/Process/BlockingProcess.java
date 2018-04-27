@@ -206,6 +206,7 @@ public class BlockingProcess implements Runnable {
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
+            System.out.println(m.Serial);
             String[] msgs = strmsg.split(";");
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
@@ -231,6 +232,7 @@ public class BlockingProcess implements Runnable {
 
                 message += table + " ";
                 message += keys;
+                System.out.println(selfID + ":" + message);
                 unicast_send(0, message.getBytes());
 
             } else if(real_msg.startsWith("crashed")){
@@ -258,7 +260,7 @@ public class BlockingProcess implements Runnable {
                 String[] strs = real_msg.split(" ");
                 int key = Integer.parseInt(strs[2]);
                 if(this.Local_Keys.contains(key)){
-                    String message = "found "+ selfID + " in " + key;
+                    String message = "found "+ key + " in " + selfID;
                     unicast_send(0, message.getBytes());
                 } else {
                     //Case1: Finger range includes 0.

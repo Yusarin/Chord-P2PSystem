@@ -188,8 +188,9 @@ public class Client extends BlockingProcess{
                         if (!running.containsKey(showid)) {
                             System.out.println("Node doesn't exist.");
                         } else {
+                            System.out.println("Send to" + showid);
                             try {
-                                client_send(showid, new Message(selfID, addr, msg + additional_msg));
+                                unicast_send(showid, msg.getBytes());
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
@@ -406,8 +407,6 @@ public class Client extends BlockingProcess{
                         Local_Keys.remove(i);
                     }
                 }
-
-
                 System.out.println("Keys in "+ selfID+" removed");
 
             } else if(real_msg.startsWith("s-show_fing")){
