@@ -139,6 +139,16 @@ public class Client extends BlockingProcess{
                         catch(IOException e){
                             e.printStackTrace();
                         }
+                        this.running.remove(crash);
+                        System.out.println("Running size:"+running.size());
+                        for(int i : running.keySet()){
+                            System.out.println(i+":"+running.get(i)+"is running");
+                        }
+                        try {
+                            crash_handler(crash);
+                        } catch (IOException e){
+                            e.printStackTrace();
+                        }
                     }
 
                 } else if (parsed[0].equals("show")) {
@@ -175,7 +185,7 @@ public class Client extends BlockingProcess{
                         }
                     } else {
                         int showid = Integer.parseInt(parsed[1]);
-                        if (!idMapIp.containsKey(showid)) {
+                        if (!running.containsKey(showid)) {
                             System.out.println("Node doesn't exist.");
                         } else {
                             try {
@@ -232,6 +242,31 @@ public class Client extends BlockingProcess{
             }).start();
         }
         return oos;
+    }
+
+    public void crash_handler(int c) throws IOException{
+        if(this.successor == c){
+            this.successor = find_successor(0, c);
+        }
+        if(this.predecessor == c){
+            this.predecessor = find_predecessor(0, c);
+            for(int i = this.predecessor+1 ; i <= c ; i++){
+                this.Local_Keys.add(i);
+            }
+        }
+
+        for(int i = 0 ; i < 8 ; i++){
+            if(Finger_table.get(i) == c){
+                int sub = find_successor(0, c);
+                Finger_table.put(i, sub);
+            }
+        }
+
+        for (int i : running.keySet()){
+            String message = "crashed "+c;
+            unicast_send(i, message.getBytes());
+        }
+
     }
 
     /**
@@ -367,10 +402,11 @@ public class Client extends BlockingProcess{
                 List<Integer> KeyList = new ArrayList<>();
                 KeyList.addAll(Local_Keys);
                 for(int i : KeyList){
-                    if(i <= thres) {
+                    if(i <= thres && i != 0) {
                         Local_Keys.remove(i);
                     }
                 }
+
 
                 System.out.println("Keys in "+ selfID+" removed");
 

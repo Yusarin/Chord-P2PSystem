@@ -233,8 +233,26 @@ public class BlockingProcess implements Runnable {
                 message += keys;
                 unicast_send(0, message.getBytes());
 
-            } else if(real_msg.startsWith("crash")){
+            } else if(real_msg.startsWith("crashed")){
                 //TODO: implement crash.
+                String[] strs = real_msg.split(" ");
+                int c = Integer.parseInt(strs[1]);
+                if(this.successor == c){
+                    this.successor = find_successor(0, c);
+                }
+                if(this.predecessor == c){
+                    this.predecessor = find_predecessor(0, c);
+                    for(int i = this.predecessor+1 ; i <= c ; i++){
+                        this.Local_Keys.add(i);
+                    }
+                }
+
+                for(int i = 0 ; i < 8 ; i++){
+                    if(Finger_table.get(i) == c){
+                        int sub = find_successor(0, c);
+                        Finger_table.put(i, sub);
+                    }
+                }
             } else if(real_msg.startsWith("find")){
                 //TODO: implement find.
                 String[] strs = real_msg.split(" ");
@@ -505,10 +523,12 @@ public class BlockingProcess implements Runnable {
         //TODO:Move keys.
         String[] keys_succ = askforkeys(this.successor);
         for(int i = 0 ; i < keys_succ.length ; i++){
-            if(Integer.parseInt(keys_succ[i]) <= selfID){
+            int k = Integer.parseInt(keys_succ[i]);
+            if(k <= selfID){
                 this.Local_Keys.add(Integer.parseInt(keys_succ[i]));
             }
         }
+        if(selfID != 0) Local_Keys.remove(0);
         String message = "rmkeys "+ selfID;
         unicast_send(this.successor, message.getBytes());
     }
