@@ -26,6 +26,7 @@ public class Node extends BlockingProcess{
         this.addr = idMapIp.get(selfID);
         ipMapId = reverseMap(idMapIp);
         this.sock.bind(this.addr);
+        this.Alive = true;
     }
 
     @Override
@@ -41,7 +42,7 @@ public class Node extends BlockingProcess{
                     try {
                         Socket s = sock.accept();
                         System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
-                        System.out.println("Listening from "+s.getRemoteSocketAddress());
+                        System.out.println("Listening from " + s.getRemoteSocketAddress());
                         if (!idMapOOS.containsValue(s)) {
                             Integer newID = ipMapId.get(s.getRemoteSocketAddress());
                             System.out.println("incoming id: " + newID);
@@ -70,6 +71,10 @@ public class Node extends BlockingProcess{
             join(0);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        while (true) {
+            heartbeat();
         }
     }
 
@@ -105,6 +110,20 @@ public class Node extends BlockingProcess{
             }).start();
         }
         return oos;
+    }
+
+    public void heartbeat(){
+        try {
+            Thread.sleep(this.Heartbeat_Period*100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        String msg = selfID+" Alive";
+        try {
+            unicast_send(0, msg.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 

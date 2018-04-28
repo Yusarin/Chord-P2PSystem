@@ -47,21 +47,14 @@ public class Client extends BlockingProcess{
     @Override
     public void run() {
         System.out.println("Client is up");
-        System.out.println("My ip is");
-        System.out.println(this.addr);
-        //System.out.println("listening on " + sock);
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while (true) {
                     try {
-                        System.out.println("Accepting");
                         Socket s = sock.accept();
-                        System.out.println("accepting: " + s.getRemoteSocketAddress() + " is connected? " + s.isConnected());
-                        System.out.println("Listening from "+s.getRemoteSocketAddress());
                         if (!idMapOOS.containsValue(s)) {
                             Integer newID = ipMapId.get(s.getRemoteSocketAddress());
-                            System.out.println("incoming id: " + newID);
                             assert newID != null;
                             idMapSocket.put(newID, s);
                             idMapOOS.put(newID, new ObjectOutputStream(s.getOutputStream()));
@@ -111,19 +104,55 @@ public class Client extends BlockingProcess{
 
                 } else if (parsed[0].equals("find")) {
 
+
                     int initiate_node = Integer.parseInt(parsed[1]);
                     int key = Integer.parseInt(parsed[2]);
-                    if(key < 0 || key > 255){
-                        System.out.println("key " + key + " not found.");
-                    }
-                    if(!running.containsKey(initiate_node)){
-                        System.out.println("Node doesn't exist.");
-                    } else {
-                        try{
-                            client_send(initiate_node, new Message(selfID, addr, msg+additional_msg));
+                    if(initiate_node == 0){
+
+                        if(this.Local_Keys.contains(key)){
+                            String message = "found "+ key + " in " + selfID;
+                            System.out.println(message);
+                        } else {
+
+                            try {
+                                //Case1: Finger range includes 0.
+                                if (this.Finger_table.get(7) < selfID) {
+                                    if (key < selfID && key > this.Finger_table.get(7)) {
+                                        String message = "find " + this.Finger_table.get(7) + " " + key;
+                                        unicast_send(this.Finger_table.get(7), message.getBytes());
+                                    } else {
+                                        String message = "find " + this.successor + " " + key;
+                                        unicast_send(this.successor, message.getBytes());
+                                    }
+                                }
+                                //Case2: Finger range doesn't include 0.
+                                else {
+                                    if (key < selfID || key > this.Finger_table.get(7)) {
+                                        String message = "find " + this.Finger_table.get(7) + " " + key;
+                                        unicast_send(this.Finger_table.get(7), message.getBytes());
+                                    } else {
+                                        String message = "find " + this.successor + " " + key;
+                                        unicast_send(this.successor, message.getBytes());
+                                    }
+                                }
+                            } catch(IOException e){
+                                e.printStackTrace();
+                            }
                         }
-                        catch(IOException e){
-                            e.printStackTrace();
+                    }
+                    else {
+
+                        if (key < 0 || key > 255) {
+                            System.out.println("Key " + key + " doesn't exist.");
+                        }
+                        if (!running.containsKey(initiate_node)) {
+                            System.out.println("Node " + initiate_node + " doesn't exist.");
+                        } else {
+                            try {
+                                client_send(initiate_node, new Message(selfID, addr, msg + additional_msg));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
 
@@ -140,9 +169,7 @@ public class Client extends BlockingProcess{
                             e.printStackTrace();
                         }
                         this.running.remove(crash);
-                        System.out.println("Running size:"+running.size());
                         for(int i : running.keySet()){
-                            System.out.println(i+":"+running.get(i)+"is running");
                         }
                         try {
                             crash_handler(crash);
@@ -188,9 +215,7 @@ public class Client extends BlockingProcess{
                         if (!running.containsKey(showid)) {
                             System.out.println("Node doesn't exist.");
                         } else {
-                            System.out.println("Send to" + showid);
                             for(int i : Finger_table.keySet()){
-                                System.out.println("########"+i+","+Finger_table.get(i));
                             }
                             try {
                                 unicast_send(showid, msg.getBytes());
@@ -201,7 +226,36 @@ public class Client extends BlockingProcess{
                         continue;
                     }
 
-                } else {
+                } else if (parsed[0].equals("SeeNum")) {
+                    System.out.println("Node "+selfID + " sends "+ this.num_send + " messages.");
+                    this.num_send = 0;
+
+                    for (int i : running.keySet()) {
+                                try {
+                                    client_send(i, new Message(selfID, addr, "SeeNum"));
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                    }
+
+                }
+//                  else if (parsed[0].equals("phase1")){
+//                    int P = Integer.parseInt(parsed[1]);
+//                    try {
+//                        phase1(P);
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+                  else if (parsed[0].equals("phase2")){
+                    try {
+                        phase2();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                else {
                     System.out.println("Illegal command.");
                     continue;
                 }
@@ -291,7 +345,6 @@ public class Client extends BlockingProcess{
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            System.out.println(strmsg);
             String[] msgs = strmsg.split(";");
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
@@ -321,6 +374,35 @@ public class Client extends BlockingProcess{
 
             } else if(real_msg.startsWith("find")){
                 //TODO: implement find.
+                String[] strs = real_msg.split(" ");
+                int key = Integer.parseInt(strs[2]);
+                if(this.Local_Keys.contains(key)){
+                    String message = "found "+ key + " in " + selfID;
+                    System.out.println(message);
+                } else {
+                    //Case1: Finger range includes 0.
+                    if(this.Finger_table.get(7) < selfID){
+                        if(key < selfID && key > this.Finger_table.get(7) && selfID != this.Finger_table.get(7)){
+                            String message = "find " + this.Finger_table.get(7) + " " + key;
+                            unicast_send(this.Finger_table.get(7), message.getBytes());
+                        } else {
+                            String message = "find " + this.successor + " " + key;
+                            unicast_send(this.successor, message.getBytes());
+                        }
+                    }
+                    //Case2: Finger range doesn't include 0.
+                    else {
+                        if((key < selfID || key > this.Finger_table.get(7)) && selfID != this.Finger_table.get(7)){
+                            String message = "find " + this.Finger_table.get(7) + " " + key;
+                            unicast_send(this.Finger_table.get(7), message.getBytes());
+                        } else {
+                            String message = "find " + this.successor + " " + key;
+                            unicast_send(this.successor, message.getBytes());
+                        }
+                    }
+
+                }
+
             } else if(real_msg.startsWith("succ")){
 
                 String message = "resp_succ ";
@@ -367,10 +449,8 @@ public class Client extends BlockingProcess{
 
                 String[] strs = real_msg.split(" ");
                 this.successor = Integer.parseInt(strs[1]);
-                System.out.println("Set successor"+" "+this.successor);
                 for(int i = 0 ; getStart(selfID, i) < this.successor && i < 8 ; i++){
                     this.Finger_table.put(i,this.successor);
-                    System.out.println("Update Fin"+i+":"+this.successor);
                 }
 
             } else if(real_msg.startsWith("update_finger_table")){
@@ -410,7 +490,6 @@ public class Client extends BlockingProcess{
                         Local_Keys.remove(i);
                     }
                 }
-                System.out.println("Keys in "+ selfID+" removed");
 
             } else if(real_msg.startsWith("s-show_fing")){
 
@@ -439,6 +518,80 @@ public class Client extends BlockingProcess{
         }
     }
 
+//    public void phase1(int p) throws IOException{
+//
+//        for(int i = 0 ; i < p ; i++){
+//            int rand = (int)(1+Math.random()*254);
+//            while(this.running.containsKey(rand)){
+//                rand = (int)(1+Math.random()*254);
+//            }
+//
+//            this.running.put(rand, new InetSocketAddress("127.0.0.1", alloc_port + rand));
+//            // For Nodes, this map is not useful currently. For client, this map is responsible for all Nodes.
+//            ConcurrentHashMap<Integer, InetSocketAddress> m = new ConcurrentHashMap<>(this.running);
+//            new Thread(new Node(new LinkedBlockingDeque<String>(), rand, m, min_delay, max_delay)).start();
+//            do_job();
+//        }
+//    }
+
+    public void phase2() throws IOException{
+        for(int i = 0; i < 128 ; i++){
+
+            int initiate_node = 0;
+            int key = (int)(1+Math.random()*254);
+            if(initiate_node == 0){
+
+                if(this.Local_Keys.contains(key)){
+                    String message = "found "+ key + " in " + selfID;
+                    System.out.println(message);
+                } else {
+
+                    try {
+                        //Case1: Finger range includes 0.
+                        if (this.Finger_table.get(7) < selfID) {
+                            if (key < selfID && key > this.Finger_table.get(7)) {
+                                String message = "find " + this.Finger_table.get(7) + " " + key;
+                                unicast_send(this.Finger_table.get(7), message.getBytes());
+                            } else {
+                                String message = "find " + this.successor + " " + key;
+                                unicast_send(this.successor, message.getBytes());
+                            }
+                        }
+                        //Case2: Finger range doesn't include 0.
+                        else {
+                            if (key < selfID || key > this.Finger_table.get(7)) {
+                                String message = "find " + this.Finger_table.get(7) + " " + key;
+                                unicast_send(this.Finger_table.get(7), message.getBytes());
+                            } else {
+                                String message = "find " + this.successor + " " + key;
+                                unicast_send(this.successor, message.getBytes());
+                            }
+                        }
+                    } catch(IOException e){
+                        e.printStackTrace();
+                    }
+                }
+            }
+            else {
+
+                if (key < 0 || key > 255) {
+                    System.out.println("Key " + key + " doesn't exist.");
+                }
+                if (!running.containsKey(initiate_node)) {
+                    System.out.println("Node " + initiate_node + " doesn't exist.");
+                } else {
+                    try {
+                        client_send(initiate_node, new Message(selfID, addr, "find "+initiate_node+" "+key));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+
+        }
+    }
+
     /**
      * Send message to the corresponding process with ID
      *
@@ -447,10 +600,21 @@ public class Client extends BlockingProcess{
      * @throws IOException
      */
     private void client_send(int dst, Message m) throws IOException {
-        //System.out.println("sending msg : " + m.msg + " to dst: " + dst);
+        num_send++;
         ObjectOutputStream oos = ChandleSendConnection(dst);
+        writeLock.lock();
         oos.flush();// TODO:Do we need flush.
         oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg));
+        writeLock.lock();
+    }
+
+    public void do_job(){
+        int test = 0;
+        for(int i = 0 ; i < 4250000; i++){
+            for(int j = 0 ; j < 5250000 ; j++){
+                test = test++;
+            }
+        }
     }
 
 }

@@ -29,12 +29,15 @@ public class BlockingProcess implements Runnable {
     protected Lock writeLock = new ReentrantLock();
     public HashMap<Integer, Integer> Finger_table;
     public HashSet<Integer> Local_Keys;
+    public int Heartbeat_Period;
+    boolean Alive;
     int successor;
     int predecessor;
     String wait_succ = "wait";
     String wait_pred = "wait";
     String wait_fin = "wait";
     String wait_keys = "wait";
+    int num_send;
 
 
     public BlockingProcess(BlockingQueue q, int selfID, ConcurrentHashMap<Integer, InetSocketAddress> map,
@@ -55,6 +58,8 @@ public class BlockingProcess implements Runnable {
         ipMapId = reverseMap(idMapIp);
         successor = 0;
         predecessor = 0;
+        this.num_send = 0;
+        this.Heartbeat_Period = 1;
     }
 
     /**
@@ -68,7 +73,6 @@ public class BlockingProcess implements Runnable {
                     Integer newID;
                     if (!idMapOOS.containsValue(s)) {
                         newID = ipMapId.get(s.getRemoteSocketAddress());
-                        System.out.println("incoming id: " + newID);
                         assert newID != null;
                         idMapOOS.put(newID, new ObjectOutputStream(s.getOutputStream()));
                         idMapSocket.put(newID, s);
@@ -103,7 +107,6 @@ public class BlockingProcess implements Runnable {
             try {
                 final String msg = (String) writeQueue.take();
                 final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
-                System.out.println("delay is: " + delay);
                 String parsed[] = msg.split("\\s+", 3);
                 if (parsed.length != 3)
                     throw new IllegalArgumentException();
@@ -149,9 +152,7 @@ public class BlockingProcess implements Runnable {
             s.setOption(StandardSocketOptions.SO_REUSEPORT, true);
             s.bind(addr);
             InetSocketAddress id;
-            System.out.println("dst="+dst);
             id = idMapIp.get(dst);
-            System.out.println(selfID+"Connecting to" + id);
             s.connect(id);
             oos = new ObjectOutputStream(s.getOutputStream());
             idMapOOS.put(dst, oos);
@@ -176,8 +177,9 @@ public class BlockingProcess implements Runnable {
      */
     protected void unicast_send(int dst, byte[] msg) throws IOException {
         //System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
+        num_send++;
         if (dst == selfID) {
-            System.out.println("You are sending message to yourself");
+            System.out.println("You are sending message to yourself"+selfID);
             return;
         }
         ObjectOutputStream oos;
@@ -206,7 +208,6 @@ public class BlockingProcess implements Runnable {
                 e.printStackTrace();
             }
             String strmsg = m.Serial;
-            System.out.println(m.Serial);
             String[] msgs = strmsg.split(";");
             String real_msg = msgs[1];
             if(real_msg.startsWith("show")){
@@ -232,7 +233,6 @@ public class BlockingProcess implements Runnable {
 
                 message += table + " ";
                 message += keys;
-                System.out.println(selfID + ":" + message);
                 unicast_send(0, message.getBytes());
 
             } else if(real_msg.startsWith("crashed")){
@@ -261,7 +261,7 @@ public class BlockingProcess implements Runnable {
                 int key = Integer.parseInt(strs[2]);
                 if(this.Local_Keys.contains(key)){
                     String message = "found "+ key + " in " + selfID;
-                    unicast_send(0, message.getBytes());
+                    System.out.println(message);
                 } else {
                     //Case1: Finger range includes 0.
                     if(this.Finger_table.get(7) < selfID){
@@ -329,10 +329,8 @@ public class BlockingProcess implements Runnable {
 
                 String[] strs = real_msg.split(" ");
                 this.successor = Integer.parseInt(strs[1]);
-                System.out.println("Set successor"+" "+this.successor);
                 for(int i = 0 ; getStart(selfID, i) < this.successor && i < 8 ; i++){
                     this.Finger_table.put(i,this.successor);
-                    System.out.println("Update Fin"+i+":"+this.successor);
                 }
 
             } else if(real_msg.startsWith("update_finger_table")){
@@ -358,7 +356,10 @@ public class BlockingProcess implements Runnable {
             } else if(real_msg.startsWith("resp_keys")){
 
                 String[] strs = real_msg.split(" ");
-                wait_keys = strs[1];
+                if(strs.length > 1)
+                    wait_keys = strs[1];
+                else
+                    wait_keys = "";
 
             } else if(real_msg.startsWith("rmkeys")){
 
@@ -372,6 +373,10 @@ public class BlockingProcess implements Runnable {
                         Local_Keys.remove(i);
                     }
                 }
+            } else if(real_msg.startsWith("SeeNum")) {
+                String msg = "Node "+selfID + " sends "+ this.num_send + " messages.";
+                this.num_send = 0;
+                System.out.println(msg);
             }
         }
     }
@@ -382,13 +387,11 @@ public class BlockingProcess implements Runnable {
             List<Integer> runn = new ArrayList<>();
             runn.add(0);
             for(int i : this.running.keySet()){
-                System.out.println("Key in running"+i);
                 runn.add(i);
             }
             Collections.sort(runn);
             if(runn.get(runn.size()-1) <= id) return 0;
             for(int j : runn){
-                System.out.println("j="+j);
                 if(j > id) return j;
             }
         }
@@ -410,13 +413,11 @@ public class BlockingProcess implements Runnable {
             Collections.reverse(runn);
             if(runn.get(0) > id) return 0;
             for(int j : runn){
-                System.out.println("j="+j);
                 if(j < id) return j;
             }
         }
         int np = n;
         int npsucc = askforsucc(np);
-        System.out.println("succ of "+np+" is "+npsucc);
         boolean cond;
         if(np < npsucc){
             cond = id <= np || id > npsucc;
@@ -426,7 +427,6 @@ public class BlockingProcess implements Runnable {
         while(cond){
 
             np = closest_preceding_finger(np, id);
-            System.out.println("np now is "+np);
             npsucc = askforsucc(np);
             if(np < npsucc){
                 cond = id <= np || id > npsucc;
@@ -442,7 +442,6 @@ public class BlockingProcess implements Runnable {
     public int closest_preceding_finger(int n, int id) throws IOException{
         HashMap<Integer, Integer> remotetable = new HashMap<>();
         remotetable = askforfingertable(n);
-        System.out.println("remotetable from "+n+".size:"+remotetable.size());
         for(int i = 7 ; i >= 0 ; i--){
 
             int node_num = remotetable.get(i);
@@ -553,9 +552,7 @@ public class BlockingProcess implements Runnable {
         int ini = find_successor(np, getStart(selfID, 0));
         Finger_table.put(0, ini);
         this.successor = ini;
-        System.out.println("Successor of "+selfID+" is "+this.successor);
-        this.predecessor = askforpred(this.successor);
-        System.out.println("Predecessor of "+selfID+" is "+this.predecessor);
+        this.predecessor = find_predecessor(np, selfID);
         setPred(this.successor, selfID);
         setSucc(this.predecessor, selfID);
 
@@ -563,16 +560,17 @@ public class BlockingProcess implements Runnable {
         for(int i = 0; i < 7 ; i++){
             int start = getStart(selfID, i+1);
             boolean cond;
-            if(selfID < Finger_table.get(i))
-                cond = start >= selfID && start < Finger_table.get(i);
-            else
-                cond = start >= selfID || start < Finger_table.get(i);
+            if(selfID < Finger_table.get(i)) {
+                cond = start >= selfID && start <= Finger_table.get(i);
+            }
+            else  {
+                cond = start >= selfID || start <= Finger_table.get(i);
+            }
+
             if(cond){
-                System.out.println("Table successfully updated1 : Node"+selfID+","+i+":"+Finger_table.get(i));
                 Finger_table.put(i+1, Finger_table.get(i));
             } else{
                 int val = find_successor(0, start);
-                System.out.println("Table successfully updated2 : Node"+selfID+","+i+":"+val);
                 Finger_table.put(i+1, val);
             }
         }
@@ -584,8 +582,12 @@ public class BlockingProcess implements Runnable {
             if(id < 0) {
                 id += 256;
             }
-            int p = find_predecessor(selfID, id);
-            System.out.println("2Predecessor of "+id+" is "+p);
+            int p;
+            if(id == this.predecessor)
+                p = this.predecessor;
+            else
+                p = find_predecessor(selfID, id);
+
             String msg = "update_finger_table "+selfID+" "+i;
             unicast_send(p, msg.getBytes());
         }
@@ -593,17 +595,15 @@ public class BlockingProcess implements Runnable {
 
     public void update_finger_table(int s, int i) throws IOException{
         boolean cond;
-        System.out.println("Interval ["+selfID+","+Finger_table.get(i)+")");
         if(selfID < Finger_table.get(i))
             cond = s > selfID && s < Finger_table.get(i);
-        else //equal case.
+        else
             cond = s > selfID || s < Finger_table.get(i);
+
         if(cond){
             Finger_table.put(i, s);
-            System.out.println(selfID+" Update finger table"+s+" "+i);
             if(i == 0 && s != selfID) {
                 this.successor = s;
-                System.out.println("2.Successor of "+selfID+" is "+this.successor);
             }
             int p = this.predecessor;
 
@@ -631,6 +631,7 @@ public class BlockingProcess implements Runnable {
         int total = n + (int)Math.pow(2, k);
         return total % 256;
     }
+
 
 
     public void do_job(){
