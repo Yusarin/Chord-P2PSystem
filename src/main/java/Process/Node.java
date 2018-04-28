@@ -73,7 +73,7 @@ public class Node extends BlockingProcess{
             e.printStackTrace();
         }
 
-        while (true) {
+        while(true){
             heartbeat();
         }
     }

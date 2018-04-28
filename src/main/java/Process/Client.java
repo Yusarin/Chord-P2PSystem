@@ -602,19 +602,7 @@ public class Client extends BlockingProcess{
     private void client_send(int dst, Message m) throws IOException {
         num_send++;
         ObjectOutputStream oos = ChandleSendConnection(dst);
-        writeLock.lock();
         oos.flush();// TODO:Do we need flush.
         oos.writeObject(new Message(m.Sender_ID, m.Sender_addr, m.msg));
-        writeLock.lock();
     }
-
-    public void do_job(){
-        int test = 0;
-        for(int i = 0 ; i < 4250000; i++){
-            for(int j = 0 ; j < 5250000 ; j++){
-                test = test++;
-            }
-        }
-    }
-
 }
