@@ -490,6 +490,7 @@ public class Client extends BlockingProcess{
                         Local_Keys.remove(i);
                     }
                 }
+                System.out.println("Keys updated");
 
             } else if(real_msg.startsWith("s-show_fing")){
 
@@ -501,7 +502,10 @@ public class Client extends BlockingProcess{
             } else if(real_msg.startsWith("a-show_fing")){
 
                 String[] strs = real_msg.split(" ");
-                showall.put(dst, strs[1] + " " + strs[2]);
+                if(strs.length > 2)
+                    showall.put(dst, strs[1] + " " + strs[2]);
+                else
+                    System.out.println("raw show: " + real_msg);
 
                 if(showall.size() == running.size()){
                     for(int i : showall.keySet()){

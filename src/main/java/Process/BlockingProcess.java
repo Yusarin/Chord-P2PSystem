@@ -177,18 +177,30 @@ public class BlockingProcess implements Runnable {
      */
     protected void unicast_send(int dst, byte[] msg) throws IOException {
         //System.out.println("sending msg : " + new String(msg) + " to dst: " + dst);
-        num_send++;
-        if (dst == selfID) {
-            System.out.println("You are sending message to yourself"+selfID);
-            return;
+        final long delay = (long) (new Random().nextDouble() * (max_delay - min_delay)) + min_delay;
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    num_send++;
+                    if (dst == selfID) {
+                        System.out.println("You are sending message to yourself" + selfID);
+                        return;
+                    }
+                    ObjectOutputStream oos;
+                    oos = handleSendConnection(dst);
+                    Message message = new Message(selfID, addr, new String(msg));
+                    writeLock.lock();
+                    oos.flush();// TODO:Do we need flush?
+                    oos.writeObject(message);
+                    writeLock.unlock();
+                }
+             catch (IOException e){
+                e.printStackTrace();
+            }
         }
-        ObjectOutputStream oos;
-        oos = handleSendConnection(dst);
-        Message message = new Message(selfID, addr, new String(msg));
-        writeLock.lock();
-        oos.flush();// TODO:Do we need flush?
-        oos.writeObject(message);
-        writeLock.unlock();
+        }, delay);
+
     }
 
     /**
@@ -265,7 +277,7 @@ public class BlockingProcess implements Runnable {
                 } else {
                     //Case1: Finger range includes 0.
                     if(this.Finger_table.get(7) < selfID){
-                        if(key < selfID && key > this.Finger_table.get(7)){
+                        if((key < selfID && key > this.Finger_table.get(7)) && selfID != this.Finger_table.get(7)){
                             String message = "find " + this.Finger_table.get(7) + " " + key;
                             unicast_send(this.Finger_table.get(7), message.getBytes());
                         } else {
@@ -275,7 +287,7 @@ public class BlockingProcess implements Runnable {
                     }
                     //Case2: Finger range doesn't include 0.
                     else {
-                        if(key < selfID || key > this.Finger_table.get(7)){
+                        if((key < selfID || key > this.Finger_table.get(7)) && selfID != this.Finger_table.get(7)){
                             String message = "find " + this.Finger_table.get(7) + " " + key;
                             unicast_send(this.Finger_table.get(7), message.getBytes());
                         } else {
@@ -373,6 +385,7 @@ public class BlockingProcess implements Runnable {
                         Local_Keys.remove(i);
                     }
                 }
+                System.out.println("Keys updated");
             } else if(real_msg.startsWith("SeeNum")) {
                 String msg = "Node "+selfID + " sends "+ this.num_send + " messages.";
                 this.num_send = 0;
@@ -545,6 +558,7 @@ public class BlockingProcess implements Runnable {
         if(selfID != 0) Local_Keys.remove(0);
         String message = "rmkeys "+ selfID;
         unicast_send(this.successor, message.getBytes());
+        System.out.println("join finished");
     }
 
     //Initialize local finger table with the help of np.

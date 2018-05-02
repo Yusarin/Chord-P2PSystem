@@ -3,8 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="3859dc51-b0c6-470e-a164-07053b22bde5" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Configuration" afterPath="$PROJECT_DIR$/Configuration" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/Process/BlockingProcess.java" afterPath="$PROJECT_DIR$/src/main/java/Process/BlockingProcess.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/Process/Client.java" afterPath="$PROJECT_DIR$/src/main/java/Process/Client.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/main/java/Process/Node.java" afterPath="$PROJECT_DIR$/src/main/java/Process/Node.java" />
     </list>
     <ignored path="$PROJECT_DIR$/.gradle/" />
     <ignored path="$PROJECT_DIR$/build/" />
@@ -26,8 +27,21 @@
       <file leaf-file-name="BlockingProcess.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/Process/BlockingProcess.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1030">
-              <caret line="561" column="25" lean-forward="false" selection-start-line="561" selection-start-column="25" selection-end-line="561" selection-end-column="25" />
+            <state relative-caret-position="258">
+              <caret line="387" column="16" lean-forward="false" selection-start-line="387" selection-start-column="16" selection-end-line="387" selection-end-column="51" />
+              <folding>
+                <element signature="e#6787#7585#0" expanded="true" />
+                <element signature="e#7584#7585#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Configuration" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Configuration">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="0" column="26" lean-forward="false" selection-start-line="0" selection-start-column="26" selection-end-line="0" selection-end-column="26" />
               <folding />
             </state>
           </provider>
@@ -73,11 +87,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Client.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="Client.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/main/java/Process/Client.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="127">
-              <caret line="205" column="55" lean-forward="false" selection-start-line="205" selection-start-column="44" selection-end-line="205" selection-end-column="55" />
+            <state relative-caret-position="296">
+              <caret line="492" column="51" lean-forward="false" selection-start-line="492" selection-start-column="51" selection-end-line="492" selection-end-column="51" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -85,11 +99,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Node.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="Node.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/Process/Node.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="229">
-              <caret line="76" column="24" lean-forward="false" selection-start-line="76" selection-start-column="24" selection-end-line="76" selection-end-column="24" />
+            <state relative-caret-position="591">
+              <caret line="127" column="0" lean-forward="false" selection-start-line="127" selection-start-column="0" selection-end-line="127" selection-end-column="0" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -131,14 +145,12 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>this.successor =</find>
       <find>Predecessor of</find>
       <find>runn</find>
       <find>Re:</find>
       <find>sendin</find>
       <find>local_Keys.add</find>
       <find>sending</find>
-      <find>rmkeys</find>
       <find>Key in</find>
       <find>Local_Keys.add</find>
       <find>Local_Keys.rem</find>
@@ -146,21 +158,23 @@
       <find>found</find>
       <find>Send to</find>
       <find>send to</find>
-      <find>show</find>
       <find>join</find>
       <find>System.out</find>
       <find>resp_keys</find>
       <find>unicast_send</find>
       <find>oos</find>
       <find>write</find>
-      <find>find</find>
       <find>c</find>
       <find>crashed</find>
       <find>running</find>
       <find>show all</find>
-      <find>crash</find>
       <find>do_job</find>
+      <find>crash</find>
       <find>client_send</find>
+      <find>find</find>
+      <find>update ke</find>
+      <find>show</find>
+      <find>rmkeys</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -459,14 +473,14 @@
         <option value="$PROJECT_DIR$/src/main/java/Process/Packet.java" />
         <option value="$PROJECT_DIR$/src/main/java/Process/UnicastDemo.java" />
         <option value="$PROJECT_DIR$/UnicastRun.sh" />
-        <option value="$PROJECT_DIR$/Configuration" />
         <option value="$PROJECT_DIR$/ChordRun.sh" />
         <option value="$PROJECT_DIR$/src/main/java/Process/RunClient.java" />
         <option value="$PROJECT_DIR$/src/main/java/Process/Message.java" />
         <option value="$PROJECT_DIR$/README.md" />
+        <option value="$PROJECT_DIR$/src/main/java/Process/Node.java" />
+        <option value="$PROJECT_DIR$/Configuration" />
         <option value="$PROJECT_DIR$/src/main/java/Process/BlockingProcess.java" />
         <option value="$PROJECT_DIR$/src/main/java/Process/Client.java" />
-        <option value="$PROJECT_DIR$/src/main/java/Process/Node.java" />
       </list>
     </option>
   </component>
@@ -688,12 +702,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1524262414490</updated>
-      <workItem from="1524262416025" duration="122043000" />
+      <workItem from="1524262416025" duration="124575000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="122043000" />
+    <option name="totallyTimeSpent" value="124575000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1280" height="734" extended-state="0" />
@@ -829,14 +843,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Configuration">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="15">
-          <caret line="1" column="0" lean-forward="false" selection-start-line="1" selection-start-column="0" selection-end-line="1" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/README.md">
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="SPLIT">
@@ -888,28 +894,39 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/Process/BlockingProcess.java">
+    <entry file="file://$PROJECT_DIR$/src/main/java/Process/Node.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1030">
-          <caret line="561" column="25" lean-forward="false" selection-start-line="561" selection-start-column="25" selection-end-line="561" selection-end-column="25" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/Process/Client.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="127">
-          <caret line="205" column="55" lean-forward="false" selection-start-line="205" selection-start-column="44" selection-end-line="205" selection-end-column="55" />
+        <state relative-caret-position="591">
+          <caret line="127" column="0" lean-forward="false" selection-start-line="127" selection-start-column="0" selection-end-line="127" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/Process/Node.java">
+    <entry file="file://$PROJECT_DIR$/Configuration">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="229">
-          <caret line="76" column="24" lean-forward="false" selection-start-line="76" selection-start-column="24" selection-end-line="76" selection-end-column="24" />
+        <state relative-caret-position="0">
+          <caret line="0" column="26" lean-forward="false" selection-start-line="0" selection-start-column="26" selection-end-line="0" selection-end-column="26" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Process/BlockingProcess.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="258">
+          <caret line="387" column="16" lean-forward="false" selection-start-line="387" selection-start-column="16" selection-end-line="387" selection-end-column="51" />
+          <folding>
+            <element signature="e#6787#7585#0" expanded="true" />
+            <element signature="e#7584#7585#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/Process/Client.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="296">
+          <caret line="492" column="51" lean-forward="false" selection-start-line="492" selection-start-column="51" selection-end-line="492" selection-end-column="51" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
