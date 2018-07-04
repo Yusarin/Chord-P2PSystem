@@ -1,7 +1,7 @@
 # Chord-A Scalable Lookup Service for Internet Applications
 
-# Implementation and Design Consideration
-For this MP, a Chord protocol is implemented based on Paper : “Chord – A Scalable Peer-to-Peer Lookup Service for Internet Applications”. There are several crucial stages for this Chord algorithm.
+## Implementation and Design Consideration
+A Chord protocol is implemented based on Paper : “Chord – A Scalable Peer-to-Peer Lookup Service for Internet Applications”. There are several crucial stages for this Chord algorithm.
 In the join part, a newly joined will update its finger table first and find its own successor and predecessor, and then based on its own finished finger table, it will update other’s finger table by invoking a recursive method update_finger_table(s,i),which will initialize the ith finger table with s in the current node, this method is called when receiving message requiring the current node to do that. After that, key update will happened on the newly joined node and its successor, this joined node will fetch the keys less than its own identifier from its successor, and correspondingly those keys will be deleted in its successor.
 In the find part, a node will ask the next node to find the key if it’s not in its own keyset. If the key is within the range of node’s finger table, next node will be assigned to its predecessor, otherwise the last node in the finger table.
 For the crash command, a node crash will be known by other nodes by the heartbeat detector, and whenever a node crashes, all other nodes update their finger table by checking whether their table contains this node, if so then update.
